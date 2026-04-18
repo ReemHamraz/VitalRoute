@@ -22,13 +22,27 @@ const { startPolling } = require('./services/alertService');
 const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+// TWEAK: Allow both Vite (5173) and Create React App/Next.js (3000) defaults
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:3000', 
+  process.env.ALLOWED_ORIGIN
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173',
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan('combined')); // logs every request — visible in Cloud Run logs
+app.use(morgan('combined')); 
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
@@ -40,7 +54,7 @@ app.use('/api/route',         routingRoutes);
 app.use('/api/crisis-command',crisisCommandRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// ── Health check (required by Cloud Run) ─────────────────────────────────────
+// ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({
   status: 'ok',
   timestamp: new Date().toISOString(),
@@ -59,6 +73,6 @@ app.use((err, req, res, next) => {
 // ── Start ─────────────────────────────────────────────────────────────────────
 startPolling();
 const PORT = process.env.PORT || 8080;
-app.listen(PORT, '0.0.0.0', () => {   // '0.0.0.0' required for Cloud Run
+app.listen(PORT, '0.0.0.0', () => {   
   console.log(`VitalRoute running on port ${PORT}`);
 });
