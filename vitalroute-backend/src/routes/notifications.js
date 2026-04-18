@@ -1,3 +1,4 @@
+import FieldValue
 const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
@@ -14,7 +15,7 @@ router.post('/send', async (req, res) => {
             type: 'manual_notification',
             message: `${title}: ${body}`,
             isRead: false,
-            createdAt: new Date()
+            createdAt: FieldValue.serverTimestamp()
         });
 
         res.json({ success: true });
