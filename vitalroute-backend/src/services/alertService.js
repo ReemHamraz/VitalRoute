@@ -1,10 +1,9 @@
-const { db } = require('../config/firebase');
+const { db, FieldValue } = require('../config/firebase'); // ensure FieldValue is imported
 
 const checkThresholds = async () => {
   try {
     const hospitalsSnapshot = await db.collection('hospitals').get();
     
-    // Use an array of promises for concurrent execution if needed, but for simplicity we iterate async.
     for (const doc of hospitalsSnapshot.docs) {
       const hospital = doc.data();
       const inventory = hospital.inventory || {};
@@ -23,13 +22,24 @@ const checkThresholds = async () => {
       }
 
       if (isCritical || isWarning) {
-         await db.collection('alerts').add({
-            hospitalId: doc.id,
-            type: isCritical ? 'critical_stock' : 'low_stock',
-            message: `Low stock for: ${lowStockItems.join(', ')}`,
-            isRead: false,
-            createdAt: new Date()
-         });
+         const alertType = isCritical ? 'critical_stock' : 'low_stock';
+         
+         // SPAM PREVENTION: Check if an unread alert already exists
+         const existingAlerts = await db.collection('alerts')
+            .where('hospitalId', '==', doc.id)
+            .where('type', '==', alertType)
+            .where('isRead', '==', false)
+            .get();
+
+         if (existingAlerts.empty) {
+             await db.collection('alerts').add({
+                hospitalId: doc.id,
+                type: alertType,
+                message: `Low stock for: ${lowStockItems.join(', ')}`,
+                isRead: false,
+                createdAt: FieldValue.serverTimestamp() // Use server time, not local Node time
+             });
+         }
       }
 
       let status = 'green';
@@ -39,7 +49,6 @@ const checkThresholds = async () => {
           status = 'yellow';
       }
 
-      // check active critical requests for this hospital
       const criticalRequests = await db.collection('supply_requests')
           .where('requestingHospitalId', '==', doc.id)
           .where('urgency', '==', 'CRITICAL')
@@ -50,7 +59,6 @@ const checkThresholds = async () => {
           status = 'red';
       }
 
-      // Check if status changed
       if (hospital.status !== status) {
           await db.collection('hospitals').doc(doc.id).update({ status });
       }
@@ -61,7 +69,6 @@ const checkThresholds = async () => {
 };
 
 const startPolling = () => {
-  // every 30 mins
   setInterval(checkThresholds, 30 * 60 * 1000);
 };
 
