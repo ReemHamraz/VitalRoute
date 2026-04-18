@@ -1,0 +1,21 @@
+{
+  "name": "vitalroute-backend",
+  "version": "1.0.0",
+  "description": "Backend for VitalRoute - real-time medical supply chain optimization platform",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "seed": "node src/utils/seedData.js"
+  },
+  "dependencies": {
+    "@google/genai": "^0.1.2",
+    "@googlemaps/google-maps-services-js": "^3.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "firebase-admin": "^12.1.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
