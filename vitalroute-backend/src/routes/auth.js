@@ -24,15 +24,40 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
+    const webApiKey = process.env.FIREBASE_WEB_API_KEY; // You MUST add this to your .env from Firebase Console -> Project Settings -> Web API Key
+
+    if (!webApiKey) {
+        return res.status(500).json({ error: "Server missing FIREBASE_WEB_API_KEY" });
+    }
+
     try {
-        const userRecord = await auth.getUserByEmail(email);
-        const userDoc = await db.collection('users').doc(userRecord.uid).get();
-        if (!userDoc.exists) throw new Error("User not found in DB");
+        // 1. Actually verify the password using Firebase Auth REST API
+        const verifyUrl = `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${webApiKey}`;
+        const authResponse = await fetch(verifyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, returnSecureToken: true })
+        });
+
+        const authData = await authResponse.json();
+
+        if (!authResponse.ok) {
+            throw new Error(authData.error.message || "Invalid credentials");
+        }
+
+        const uid = authData.localId;
+
+        // 2. Fetch their role from Firestore
+        const userDoc = await db.collection('users').doc(uid).get();
+        if (!userDoc.exists) throw new Error("User role not found in DB");
         const role = userDoc.data().role;
 
-        const token = jwt.sign({ uid: userRecord.uid, role, email }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-        res.json({ token, user: { uid: userRecord.uid, email, role } });
+        // 3. Issue your custom JWT
+        const token = jwt.sign({ uid, role, email }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        res.json({ token, user: { uid, email, role } });
+
     } catch (error) {
+        console.error("[Auth] Login failed:", error.message);
         res.status(401).json({ error: "Invalid credentials or user not found" });
     }
 });
