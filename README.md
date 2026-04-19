@@ -10,16 +10,16 @@ VitalRoute connects 50+ registered hospitals and suppliers on a live map, matche
 
 ## Stack
 
-| | |
+| Category | Technology |
 |---|---|
-| Backend | Node.js 20, Express 4 |
-| Database | Firebase Firestore |
-| Auth | Firebase Authentication + JWT |
-| AI | Gemini 2.5 Flash |
-| Maps | Google Maps Directions API + Distance Matrix API |
-| Notifications | Firebase Cloud Messaging |
-| Frontend | React 18, Vite, Tailwind CSS |
-| Deployment | Vercel |
+| **Backend** | Node.js 20, Express 4 |
+| **Database** | Firebase Firestore |
+| **Auth** | Firebase Authentication + JWT |
+| **AI** | Gemini 2.5 Flash |
+| **Maps** | Google Maps Directions API + Distance Matrix API |
+| **Notifications** | Firebase Cloud Messaging |
+| **Frontend** | React 18, Vite, Tailwind CSS |
+| **Deployment** | Vercel (Frontend) & Render/Railway (Backend) |
 
 ---
 
@@ -69,25 +69,17 @@ FCM_SERVER_KEY=
 
 ## Deployment
 
-### Backend → ?
+### Frontend → Vercel
+Push your code to GitHub. Connect the repository on [Vercel](https://vercel.com), set the **root directory** to `vitalroute-frontend`, and add `VITE_API_URL` (pointing to your live backend) in the Vercel dashboard under Settings → Environment Variables. Vercel detects Vite automatically and handles the build.
 
-Push to GitHub. Connect the repo on [vercel.com](https://vercel.com), set root directory to `vitalroute-backend`, and add all environment variables in the Vercel dashboard under Settings → Environment Variables. Vercel detects Node.js automatically.
-
-### Frontend → ?
-
-```bash
-cd vitalroute-frontend
-npm run build
-firebase deploy --only hosting
-```
-
-Set `VITE_API_URL` in your frontend `.env` to the Vercel deployment URL before building.
+### Backend → Render or Railway
+Connect your GitHub repository to a cloud provider like [Render](https://render.com) or [Railway](https://railway.app). Set the **root directory** to `vitalroute-backend` and the start command to `npm start`. Copy all variables from your local `.env` and paste them into the platform's Environment Variables dashboard.
 
 ---
 
 ## How it works
 
-```
+```text
 Nurse types: "Highway accident — need 10 units O-negative and 2 ventilators NOW"
                                         │
                                         ▼
@@ -126,17 +118,17 @@ Nurse types: "Highway accident — need 10 units O-negative and 2 ventilators NO
                      └──────────────────────────────────────┘
                                         │
                     ┌───────────────────┴────────────────────┐
-                    ▼                                         ▼
-          Match found within 50km                   No match found
-          → notify hospital + supplier              → escalation alert
-          → dispatch with live route                  to coordinator
+                    ▼                                        ▼
+          Match found within 50km                  No match found
+          → notify hospital + supplier             → escalation alert
+          → dispatch with live route                 to coordinator
 ```
 
 ## How the matching works
 
 When a request comes in, the engine fetches all hospitals and suppliers, filters by available stock, and calls the Distance Matrix API in a single batch to get ETAs. Each source gets a score:
 
-```
+```text
 score = (0.6 × proximity) + (0.4 × stock availability ratio)
 ```
 
@@ -154,11 +146,10 @@ Top 3 results per item are returned. If nothing is found within 50km, an escalat
 
 ## Built by
 
-* Reem Hamraz
-* Mohammad Maaz Siddiqui
-* Haider Maseeh
+- Reem Hamraz
+- Mohammad Maaz Siddiqui
+- Haider Maseeh
 
-
-Theme: Smart Supply Chains — Open Inovation: Resilient Logistics and Dynamic Supply Chain Optimization.
+**Theme:** Smart Supply Chains — Open Innovation: Resilient Logistics and Dynamic Supply Chain Optimization.
 
 We picked healthcare because it's the highest-stakes version of the problem. Rerouting a package is a logistics problem. Rerouting a life is what actually matters.
