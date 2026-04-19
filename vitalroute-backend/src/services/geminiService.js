@@ -59,4 +59,22 @@ Rules:
   }
 
   // Always audit-log to Firestore, even if it's an error response
-  await d
+  await db.collection('crisis_requests').add({
+    hospitalId: hospitalId || null,
+    rawText,
+    parsed,
+    timestamp: new Date(),
+    status: parsed?.error ? 'rejected' : 'pending_confirmation',
+  });
+
+  // If Gemini says it's not a supply request, surface that to the caller
+  if (parsed?.error === 'not_a_supply_request') {
+    const err = new Error('Input was not recognised as a supply request');
+    err.status = 400;
+    throw err;
+  }
+
+  return parsed;
+};
+
+module.exports = { parseCrisisCommand };
