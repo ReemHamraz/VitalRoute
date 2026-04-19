@@ -3,7 +3,7 @@ const { parseCrisisCommand } = require('../services/geminiService');
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
-router.use(authMiddleware);
+//router.use(authMiddleware);
 
 router.post('/', async (req, res, next) => {
   try {
