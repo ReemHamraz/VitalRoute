@@ -1,6 +1,6 @@
 # VitalRoute
 
-A real-time medical supply chain platform built for the Google Solutions Challenge 2025.
+A real-time medical supply chain platform built for the Google Solutions Challenge 2026.
 
 The problem it solves is specific: a hospital in Lucknow runs out of O-negative blood at 2am. Somewhere across the city, three other hospitals have it. Nobody knows. The patient waits.
 
