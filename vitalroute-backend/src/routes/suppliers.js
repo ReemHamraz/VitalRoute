@@ -2,10 +2,6 @@ const express = require('express');
 const { db } = require('../config/firebase');
 const authMiddleware = require('../middleware/auth');
 
-const router = express.Router();const express = require('express');
-const { db } = require('../config/firebase');
-const authMiddleware = require('../middleware/auth');
-
 const router = express.Router();
 router.use(authMiddleware);
 
