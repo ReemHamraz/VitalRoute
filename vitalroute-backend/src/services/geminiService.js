@@ -5,8 +5,8 @@ const parseCrisisCommand = async (rawText, hospitalId) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
+ 
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const systemPrompt = `You are a medical emergency logistics assistant for VitalRoute.
 Your ONLY job is to extract structured supply requests from natural language.
 Return ONLY valid JSON, no markdown, no explanation.
