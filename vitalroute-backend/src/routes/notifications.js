@@ -1,11 +1,11 @@
 const express = require('express');
-const { db } = require('../config/firebase');
+const { db, FieldValue } = require('../config/firebase'); // Fix: Use require and destructure FieldValue
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 router.use(authMiddleware);
 
-router.post('/send', async (req, res) => {
+router.post('/send', async (req, res, next) => {
     try {
         const { targetId, title, body } = req.body;
         
@@ -14,11 +14,13 @@ router.post('/send', async (req, res) => {
             type: 'manual_notification',
             message: `${title}: ${body}`,
             isRead: false,
-            createdAt: new Date()
+            createdAt: FieldValue.serverTimestamp() // Fix: Uses Firestore server time
         });
 
         res.json({ success: true });
-    } catch(err) { res.status(500).json({error: err.message}); }
+    } catch(err) { 
+        next(err); // Fix: Forwards to the global error handler
+    }
 });
 
 module.exports = router;

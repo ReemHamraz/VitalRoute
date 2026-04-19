@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const morgan = require('morgan');
 
 // Initialize Firebase
 require('./config/firebase');
@@ -20,27 +21,58 @@ const { startPolling } = require('./services/alertService');
 
 const app = express();
 
-// Middleware
-app.use(cors({ origin: 'http://localhost:5173' })); 
-app.use(express.json());
+// ── Middleware ────────────────────────────────────────────────────────────────
+// TWEAK: Allow both Vite (5173) and Create React App/Next.js (3000) defaults
+const allowedOrigins = [
+  'http://localhost:5173', 
+  'http://localhost:3000', 
+  process.env.ALLOWED_ORIGIN
+].filter(Boolean);
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/hospitals', hospitalsRoutes);
-app.use('/api/suppliers', suppliersRoutes);
-app.use('/api/requests', requestsRoutes);
-app.use('/api/match', matchingRoutes);
-app.use('/api/route', routingRoutes);
-app.use('/api/crisis-command', crisisCommandRoutes);
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(morgan('combined')); 
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/auth',          authRoutes);
+app.use('/api/hospitals',     hospitalsRoutes);
+app.use('/api/suppliers',     suppliersRoutes);
+app.use('/api/requests',      requestsRoutes);
+app.use('/api/match',         matchingRoutes);
+app.use('/api/route',         routingRoutes);
+app.use('/api/crisis-command',crisisCommandRoutes);
 app.use('/api/notifications', notificationsRoutes);
 
-// Health check
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+// ── Health check ─────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  env: process.env.NODE_ENV || 'development'
+}));
 
-// Start background workers
+// ── Global error handler ──────────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  console.error('[ERROR]', err.message, err.stack);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
+  });
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
 startPolling();
-
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`VitalRoute Backend running on port ${PORT}`);
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, '0.0.0.0', () => {   
+  console.log(`VitalRoute running on port ${PORT}`);
 });
