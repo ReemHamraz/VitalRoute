@@ -71,7 +71,7 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
-startPolling();
+//startPolling();
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, '0.0.0.0', () => {   
   console.log(`VitalRoute running on port ${PORT}`);

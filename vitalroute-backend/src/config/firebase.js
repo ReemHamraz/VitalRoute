@@ -2,7 +2,22 @@ const admin = require('firebase-admin');
 require('dotenv').config();
 
 let privateKey = process.env.FIREBASE_PRIVATE_KEY;
-if (privateKey) privateKey = privateKey.replace(/\\n/g, '\n');
+
+// Force replace literal "\n" strings with actual line breaks
+if (privateKey) {
+  privateKey = privateKey.replace(/\\n/g, '\n');
+  
+  // Strip any accidental surrounding quotes that dotenv might have left behind
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.substring(1, privateKey.length - 1);
+  }
+}
+
+console.log("--- AUTH DIAGNOSTICS ---");
+console.log("1. Email:", process.env.FIREBASE_CLIENT_EMAIL);
+console.log("2. Key Starts With:", privateKey ? privateKey.substring(0, 30) : "MISSING");
+console.log("3. Key Ends With:", privateKey ? privateKey.slice(-30) : "MISSING");
+console.log("------------------------");
 
 try {
   admin.initializeApp({
