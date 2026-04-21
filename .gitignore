@@ -3,3 +3,4 @@ node_modules/
 *-firebase-adminsdk*.json
 .DS_Store
 npm-debug.log*
+serviceAccountKey.json
