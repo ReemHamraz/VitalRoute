@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
-const { getEtaBatch } = require('../services/mapService');
+const { getEtaBatch } = require('../services/mapsService');
 
 router.post('/', async (req, res) => {
   try {
