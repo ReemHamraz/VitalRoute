@@ -94,16 +94,16 @@ const computeStatus = (inventory) => {
 };
 
 const SUPPLIERS = [
-  { id:'sup01', name:"MedLine Oxygen Pvt Ltd",         type:"oxygen_supplier", lat:26.8734, lng:80.9284 },
-  { id:'sup02', name:"Lucknow Central Blood Bank",     type:"blood_bank",      lat:26.8501, lng:80.9373 },
-  { id:'sup03', name:"Apollo Pharmacy Hub",            type:"pharmacy",        lat:26.8623, lng:80.9981 },
-  { id:'sup04', name:"National Medical Logistics",     type:"medical_store",   lat:26.8601, lng:80.9601 },
-  { id:'sup05', name:"OxyGen Express",                 type:"oxygen_supplier", lat:26.8192, lng:80.9041 },
-  { id:'sup06', name:"Alambagh Medical Store",         type:"pharmacy",        lat:26.8143, lng:80.9087 },
-  { id:'sup07', name:"City Blood Bank Gomti Nagar",    type:"blood_store",    lat:26.8556, lng:80.9971 },
-  { id:'sup08', name:"Faizabad Rd Oxygen Supply",      type:"oxygen_supplier", lat:26.8872, lng:81.0089 },
-  { id:'sup09', name:"Indira Nagar Pharma Depot",      type:"pharmacy",        lat:26.8832, lng:80.9921 },
-  { id:'sup10', name:"KGMU Medical Stores",            type:"medical_store",   lat:26.8651, lng:80.9241 },
+  { id:'sup01', name:"MedLine Oxygen Pvt Ltd",       type:"oxygen_supplier", lat:26.8734, lng:80.9284, hasRefrigeration: false, status: 'active' },
+  { id:'sup02', name:"Lucknow Central Blood Bank",   type:"blood_bank",      lat:26.8501, lng:80.9373, hasRefrigeration: true,  status: 'active' },
+  { id:'sup03', name:"Apollo Pharmacy Hub",          type:"pharmacy",        lat:26.8623, lng:80.9981, hasRefrigeration: true,  status: 'active' },
+  { id:'sup04', name:"National Medical Logistics",   type:"medical_store",   lat:26.8601, lng:80.9601, hasRefrigeration: false, status: 'active' },
+  { id:'sup05', name:"OxyGen Express",               type:"oxygen_supplier", lat:26.8192, lng:80.9041, hasRefrigeration: false, status: 'active' },
+  { id:'sup06', name:"Alambagh Medical Store",       type:"pharmacy",        lat:26.8143, lng:80.9087, hasRefrigeration: true,  status: 'active' },
+  { id:'sup07', name:"City Blood Bank Gomti Nagar",  type:"blood_store",     lat:26.8556, lng:80.9971, hasRefrigeration: true,  status: 'active' },
+  { id:'sup08', name:"Faizabad Rd Oxygen Supply",    type:"oxygen_supplier", lat:26.8872, lng:81.0089, hasRefrigeration: false, status: 'active' },
+  { id:'sup09', name:"Indira Nagar Pharma Depot",    type:"pharmacy",        lat:26.8832, lng:80.9921, hasRefrigeration: true,  status: 'active' },
+  { id:'sup10', name:"KGMU Medical Stores",          type:"medical_store",   lat:26.8651, lng:80.9241, hasRefrigeration: false, status: 'active' },
 ];
 
 const SUPPLIER_INVENTORY = {
