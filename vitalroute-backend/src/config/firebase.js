@@ -1,41 +1,32 @@
-const admin = require('firebase-admin');
 require('dotenv').config();
+const admin = require('firebase-admin');
+const path = require('path');
 
-let privateKey = process.env.FIREBASE_PRIVATE_KEY;
+// 1. THE SLEDGEHAMMER: Calculate the exact C:\Users\... path to your file
+// Adjust '../../serviceAccountKey.json' depending on where this file is relative to the root
+const absoluteKeyPath = path.resolve(__dirname, '../../serviceAccountKey.json');
 
-// Force replace literal "\n" strings with actual line breaks
-if (privateKey) {
-  privateKey = privateKey.replace(/\\n/g, '\n');
-  
-  // Strip any accidental surrounding quotes that dotenv might have left behind
-  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-    privateKey = privateKey.substring(1, privateKey.length - 1);
-  }
-}
-
-console.log("--- AUTH DIAGNOSTICS ---");
-console.log("1. Email:", process.env.FIREBASE_CLIENT_EMAIL);
-console.log("2. Key Starts With:", privateKey ? privateKey.substring(0, 30) : "MISSING");
-console.log("3. Key Ends With:", privateKey ? privateKey.slice(-30) : "MISSING");
-console.log("------------------------");
+// 2. Force the underlying Google gRPC network layer to use this exact file
+process.env.GOOGLE_APPLICATION_CREDENTIALS = absoluteKeyPath;
 
 try {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId:   process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey,
-    }),
-  });
-  console.log('Firebase Admin initialized successfully.');
+  if (!admin.apps.length) {
+    const serviceAccount = require(absoluteKeyPath);
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id
+    });
+    console.log(`🔥 Firebase Admin connected via ABSOLUTE PATH: \n   ${absoluteKeyPath}`);
+  }
 } catch (error) {
   console.error('Firebase Admin initialization error:', error.message);
-  process.exit(1); // Hard exit — app is useless without Firebase
+  process.exit(1);
 }
 
-const db        = admin.firestore();
-const auth      = admin.auth();
-const messaging = admin.messaging();
-const FieldValue = admin.firestore.FieldValue; // NEW — use for serverTimestamp()
+const db         = admin.firestore();
+const auth       = admin.auth();
+const messaging  = admin.messaging();
+const FieldValue = admin.firestore.FieldValue;
 
 module.exports = { admin, db, auth, messaging, FieldValue };
