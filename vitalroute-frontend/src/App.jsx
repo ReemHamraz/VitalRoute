@@ -1,310 +1,215 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
-  AlertTriangle, Zap, Droplet, MapPin, Siren,
-  Loader2, TrendingUp, Navigation, ChevronRight,
-  X, Info, Activity, Package, Radio, Shield, Truck, Clock
+  AlertTriangle, Zap, MapPin, Siren,
+  Loader2, Navigation, X, Info, Radio, Snowflake, ShieldCheck, Clock
 } from "lucide-react";
-import { GoogleMap, TrafficLayer, DirectionsRenderer, Marker, useJsApiLoader } from '@react-google-maps/api';
 
-// ── DESIGN SYSTEM ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// DESIGN: Cold War Teletype Command Terminal
+// Palette: warm charcoal · phosphor vermilion · verdigris
+// ─────────────────────────────────────────────
+
 const C = {
-  bg: "#0F0D0A",
-  panel: "#131109",
-  rule: "rgba(237,228,210,0.08)",
+  bg:       "#0F0D0A",
+  panel:    "#131109",
+  rule:     "rgba(237,228,210,0.08)",
   ruleHard: "rgba(237,228,210,0.14)",
-  text: "#EDE8D2",
-  mid: "rgba(237,232,210,0.50)",
-  dim: "rgba(237,232,210,0.26)",
-  faint: "rgba(237,232,210,0.09)",
-  red: "#E03820",
-  redGlow: "rgba(224,56,32,0.22)",
-  redDim: "rgba(224,56,32,0.12)",
-  redBd: "rgba(224,56,32,0.36)",
-  teal: "#3D8A78",
-  tealBd: "rgba(61,138,120,0.42)",
-  tealDim: "rgba(61,138,120,0.14)",
-  orange: "#C05C18",
-  orangeDim: "rgba(192,92,24,0.14)",
+  text:     "#EDE8D2",
+  mid:      "rgba(237,232,210,0.50)",
+  dim:      "rgba(237,232,210,0.26)",
+  faint:    "rgba(237,232,210,0.09)",
+  red:      "#E03820",
+  redGlow:  "rgba(224,56,32,0.22)",
+  redDim:   "rgba(224,56,32,0.12)",
+  redBd:    "rgba(224,56,32,0.36)",
+  teal:     "#3D8A78",
+  tealBd:   "rgba(61,138,120,0.42)",
+  tealDim:  "rgba(61,138,120,0.14)",
+  orange:   "#C05C18",
+  orangeDim:"rgba(192,92,24,0.14)",
   orangeBd: "rgba(192,92,24,0.38)",
-  olive: "#78803A",
+  olive:    "#78803A",
   oliveDim: "rgba(120,128,58,0.12)",
-  oliveBd: "rgba(120,128,58,0.36)",
-  slate: "#487080",
-  slateDim: "rgba(72,112,128,0.12)",
-  slateBd: "rgba(72,112,128,0.36)",
+  oliveBd:  "rgba(120,128,58,0.36)",
 };
 
-const URGENCY = {
-  CRITICAL: { color: C.red, dim: C.redDim, bd: C.redBd, label: "CRITICAL" },
-  HIGH: { color: C.orange, dim: C.orangeDim, bd: C.orangeBd, label: "HIGH" },
-  MODERATE: { color: C.olive, dim: C.oliveDim, bd: C.oliveBd, label: "MODERATE" },
-  LOW: { color: C.slate, dim: C.slateDim, bd: C.slateBd, label: "LOW" },
-};
-
-const tacticalMapStyle = [
-  { "elementType": "geometry", "stylers": [{ "color": "#0F0D0A" }] },
-  { "elementType": "labels.text.fill", "stylers": [{ "color": "#3D8A78" }] },
-  { "elementType": "labels.text.stroke", "stylers": [{ "visibility": "off" }] },
-  { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
-  { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#020617" }] }
-];
-
-const mono = "'Courier Prime', 'Courier New', monospace";
+const LKO_BASE = { lat: 26.8638, lng: 80.9228 };
+const mono  = "'Courier Prime', 'Courier New', monospace";
 const bebas = "'Bebas Neue', Impact, sans-serif";
 
-// ── SUB-COMPONENTS ───────────────────────────────────────────────────────────
-
-const Badge = ({ level }) => {
-  const u = URGENCY[level] || URGENCY.LOW;
+function Ping({ color = C.red, sz = 5 }) {
   return (
-    <span style={{
-      fontFamily: mono, fontSize: 9, letterSpacing: "0.18em", padding: "2px 6px",
-      background: u.dim, border: `1px solid ${u.bd}`, color: u.color,
-    }}>{u.label}</span>
+    <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: sz + 8, height: sz + 8, flexShrink: 0 }}>
+      <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: color, opacity: 0.22, animation: "vr-ping 1.9s ease-out infinite" }} />
+      <span style={{ width: sz, height: sz, borderRadius: "50%", background: color }} />
+    </span>
   );
-};
+}
 
-const Ping = ({ color = C.red, sz = 5 }) => (
-  <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: sz + 8, height: sz + 8, flexShrink: 0 }}>
-    <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: color, opacity: 0.22, animation: "vr-ping 1.9s ease-out infinite" }} />
-    <span style={{ width: sz, height: sz, borderRadius: "50%", background: color }} />
-  </span>
-);
+// ── TACTICAL RADAR (No-Cost Maps Alternative) ────────────────────────────────
 
-const FeedCard = ({ entry, isActive, onClick }) => {
-  const u = URGENCY[entry.urgency] || URGENCY.LOW;
-  return (
-    <div onClick={onClick} style={{
-      borderBottom: `1px solid ${C.rule}`, background: isActive ? u.dim : "transparent",
-      borderLeft: `3px solid ${isActive ? u.color : "transparent"}`,
-      padding: "12px", cursor: "pointer", transition: "background 0.2s"
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-        <Badge level={entry.urgency} />
-        <span style={{ fontFamily: mono, fontSize: 9, color: C.dim }}>{entry.ts}</span>
-      </div>
-      <div style={{ fontFamily: bebas, fontSize: 18, color: C.text, marginBottom: 4 }}>{entry.title}</div>
-      <div style={{ display: "flex", gap: 5, alignItems: "center", fontSize: 9, color: C.mid }}>
-        <MapPin size={10} /> {entry.loc}
-      </div>
-    </div>
-  );
-};
-
-// ── MAIN APPLICATION ──────────────────────────────────────────────────────────
-
-export default function VitalRoute() {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: "YOUR_GOOGLE_MAPS_API_KEY" // Replace with your key
-  });
-
-  const [feed, setFeed] = useState([]);
-  const [activeId, setActiveId] = useState(null);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [activeRoute, setActiveRoute] = useState(null);
-  const feedRef = useRef(null);
-
-  const activeEntry = useMemo(() => feed.find(f => f.id === activeId), [feed, activeId]);
-
-  // Connect to Node.js Backend on Port 8080
-  const extract = async () => {
-    if (!input.trim() || loading) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("http://localhost:8080/api/crisis-command", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input.trim() }),
-      });
-
-      if (!res.ok) throw new Error("Backend connection failed.");
-      
-      const data = await res.json();
-      
-      // Add simulated coords if backend doesn't provide them yet
-      const entry = {
-        id: Date.now(),
-        ts: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        coords: { lat: 26.8890 + (Math.random() - 0.5) * 0.05, lng: 80.9333 + (Math.random() - 0.5) * 0.05 },
-        ...data
-      };
-
-      setFeed(prev => [entry, ...prev]);
-      setActiveId(entry.id);
-      setInput("");
-    } catch (err) {
-      setError("COMMAND LINK FAILURE: Ensure Port 8080 is active.");
-    } finally {
-      setLoading(false);
-    }
-  };
+function Radar({ activeMatch }) {
+  const R = 148; 
+  const D = R * 2;
+  
+  let blipX = R;
+  let blipY = R;
+  
+  if (activeMatch) {
+    // Map GPS diffs to radar pixels
+    const latDiff = (activeMatch.lat - LKO_BASE.lat) * 2000;
+    const lngDiff = (activeMatch.lng - LKO_BASE.lng) * 2000;
+    blipX = R + lngDiff;
+    blipY = R - latDiff; 
+  }
 
   return (
-    <div style={{
-      width: "100%", height: "100vh", display: "grid", 
-      gridTemplateRows: "46px 1fr", gridTemplateColumns: "190px 1fr 306px",
-      background: C.bg, color: C.text, overflow: "hidden"
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:wght@400;700&display=swap');
-        @keyframes radar-sweep { to { transform: rotate(360deg); } }
-        @keyframes vr-ping { 0%{transform:scale(1);opacity:.22} 70%{transform:scale(2.8);opacity:0} }
-        @keyframes vr-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .vr-ta:focus { outline: none; border-color: ${C.redBd} !important; }
-        .vr-scan-bg {
-          background-image: linear-gradient(${C.rule} 1px, transparent 1px), linear-gradient(90deg, ${C.rule} 1px, transparent 1px);
-          background-size: 40px 40px;
-        }
-      `}</style>
-
-      {/* ══ TOP BAR ══ */}
-      <header style={{
-        gridColumn: "1/-1", background: C.panel, borderBottom: `1px solid ${C.ruleHard}`,
-        display: "flex", alignItems: "center", padding: "0 18px", animation: "vr-in 0.4s ease both"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, paddingRight: 18, borderRight: `1px solid ${C.rule}` }}>
-          <Siren size={14} color={C.red} />
-          <span style={{ fontFamily: bebas, fontSize: 22, letterSpacing: "0.12em" }}>VITALROUTE</span>
-          <span style={{ fontFamily: mono, fontSize: 9, color: C.dim, marginLeft: 4 }}>CRISIS LOGISTICS v2.5</span>
+    <div style={{ position: "relative", width: D, height: D, flexShrink: 0 }}>
+      <div style={{ position: "absolute", inset: 0, borderRadius: "50%", overflow: "hidden", border: `1px solid ${C.ruleHard}` }}>
+        <svg width={D} height={D} style={{ position: "absolute", inset: 0 }}>
+          {[0.28, 0.55, 0.78, 1].map((r, i) => (
+            <circle key={i} cx={R} cy={R} r={R * r} fill="none" stroke={i === 3 ? C.ruleHard : C.rule} strokeWidth={i === 3 ? 1 : 0.5} />
+          ))}
+          <line x1={R} y1={0} x2={R} y2={D} stroke={C.rule} strokeWidth="0.5" />
+          <line x1={0} y1={R} x2={D} y2={R} stroke={C.rule} strokeWidth="0.5" />
+        </svg>
+        <div style={{
+          position: "absolute", inset: 0, borderRadius: "50%",
+          background: `conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(61,138,120,0.1) 52deg, transparent 96deg)`,
+          animation: "radar-sweep 5s linear infinite",
+        }} />
+      </div>
+      <div style={{ position: "absolute", left: "50%", top: "50%", width: 5, height: 5, borderRadius: "50%", background: C.teal, transform: "translate(-50%,-50%)", boxShadow: `0 0 8px ${C.teal}` }} />
+      {activeMatch && (
+        <div style={{ position: "absolute", left: blipX, top: blipY, transform: "translate(-50%, -50%)" }}>
+          <Ping color={C.teal} sz={6} />
         </div>
-        <div style={{ flex: 1, display: "flex", gap: 20, paddingLeft: 20 }}>
-            <span style={{ fontFamily: mono, fontSize: 9, color: C.teal }}>● NETWORK LIVE</span>
-            <span style={{ fontFamily: mono, fontSize: 9, color: C.mid }}>NODES: 50 HOSPITALS ACTIVE</span>
-        </div>
-      </header>
-
-      {/* ══ LEFT: ANALYTICS ══ */}
-      <aside style={{
-        background: C.panel, borderRight: `1px solid ${C.ruleHard}`, display: "flex", flexDirection: "column",
-        padding: "16px", animation: "vr-in 0.5s ease 0.1s both"
-      }}>
-        <div style={{ fontFamily: mono, fontSize: 8, color: C.dim, marginBottom: 20 }}>OPERATIONAL METRICS</div>
-        <StatItem label="TOTAL ASSETS" val={feed.length} color={C.text} />
-        <StatItem label="CRITICAL NEED" val={feed.filter(f => f.urgency === 'CRITICAL').length} color={C.red} />
-        <StatItem label="REROUTED" val="02" color={C.teal} />
-        <div style={{ marginTop: "auto", borderTop: `1px solid ${C.rule}`, paddingTop: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <Radio size={10} color={C.dim} />
-            <span style={{ fontSize: 8, color: C.dim }}>CH-7 ENCRYPTED</span>
-          </div>
-        </div>
-      </aside>
-
-      {/* ══ CENTER: MAP ══ */}
-      <main style={{ position: "relative", overflow: "hidden", display: "flex", flexDirection: "column" }}>
-        <div className="vr-scan-bg" style={{ position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none" }} />
-        
-        {isLoaded ? (
-          <div style={{ flex: 1, position: "relative" }}>
-            <GoogleMap
-              mapContainerStyle={{ width: '100%', height: '100%' }}
-              center={{ lat: 26.8890, lng: 80.9333 }}
-              zoom={13}
-              options={{ styles: tacticalMapStyle, disableDefaultUI: true }}
-            >
-              <TrafficLayer />
-              {feed.map(e => (
-                <Marker 
-                  key={e.id} position={e.coords} 
-                  icon={{
-                    path: window.google.maps.SymbolPath.CIRCLE,
-                    scale: e.id === activeId ? 10 : 6,
-                    fillColor: URGENCY[e.urgency]?.color || C.teal,
-                    fillOpacity: 1, strokeWeight: 2, strokeColor: "#FFF"
-                  }}
-                />
-              ))}
-            </GoogleMap>
-            <div style={{
-              position: "absolute", inset: 0, pointerEvents: "none", zIndex: 2,
-              background: `conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(224,56,32,0.03) 80deg, transparent 96deg)`,
-              animation: "radar-sweep 10s linear infinite"
-            }} />
-          </div>
-        ) : (
-          <div style={{ margin: "auto", fontFamily: mono, color: C.dim }}>LOADING TACTICAL GRID...</div>
-        )}
-
-        {/* INCIDENT DETAIL STRIP (Restored) */}
-        {activeEntry && (
-          <div style={{ 
-            height: "120px", background: URGENCY[activeEntry.urgency].dim, 
-            borderTop: `1px solid ${URGENCY[activeEntry.urgency].bd}`, 
-            display: "flex", zIndex: 3, animation: "vr-in 0.3s ease" 
-          }}>
-            <div style={{ padding: "15px", borderRight: `1px solid ${C.rule}`, minWidth: 200 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
-                <Ping color={URGENCY[activeEntry.urgency].color} sz={4} />
-                <span style={{ fontSize: 9, color: URGENCY[activeEntry.urgency].color }}>{activeEntry.urgency}</span>
-              </div>
-              <div style={{ fontFamily: bebas, fontSize: 20 }}>{activeEntry.title}</div>
-            </div>
-            <div style={{ flex: 1, padding: "15px", borderRight: `1px solid ${C.rule}` }}>
-              <div style={{ fontSize: 8, color: C.dim, marginBottom: 5 }}>REQUIRED SUPPLIES</div>
-              {activeEntry.items?.map((item, i) => (
-                <div key={i} style={{ fontSize: 11 }}>{item.q} {item.u} {item.n}</div>
-              ))}
-            </div>
-            <div style={{ padding: "15px", display: "flex", alignItems: "center" }}>
-              <button style={{ 
-                background: URGENCY[activeEntry.urgency].dim, border: `1px solid ${URGENCY[activeEntry.urgency].bd}`,
-                color: URGENCY[activeEntry.urgency].color, padding: "8px 15px", fontFamily: mono, fontSize: 10, cursor: "pointer"
-              }}>DISPATCH SMART ROUTE</button>
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* ══ RIGHT: FEED & COMMAND ══ */}
-      <aside style={{
-        background: C.panel, borderLeft: `1px solid ${C.ruleHard}`, display: "flex", flexDirection: "column",
-        animation: "vr-in 0.5s ease 0.2s both"
-      }}>
-        <div style={{ padding: "12px", borderBottom: `1px solid ${C.rule}`, display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: bebas, fontSize: 16 }}>LIVE LOGISTICS</span>
-          <Ping color={C.red} sz={4} />
-        </div>
-        
-        <div style={{ flex: 1, overflowY: "auto" }}>
-          {feed.map(f => <FeedCard key={f.id} entry={f} isActive={f.id === activeId} onClick={() => setActiveId(f.id)} />)}
-        </div>
-
-        {/* CRISIS COMMAND INPUT (Restored) */}
-        <div style={{ padding: "12px", borderTop: `1px solid ${C.ruleHard}`, background: C.panel }}>
-          <div style={{ fontSize: 8, color: C.dim, marginBottom: 8 }}>CRISIS COMMAND INPUT</div>
-          <textarea 
-            className="vr-ta" value={input} onChange={e => setInput(e.target.value)}
-            placeholder="E.g. Hospital A needs 4 oxygen tanks..."
-            style={{ 
-              width: "100%", background: "rgba(237,232,210,0.04)", border: `1px solid ${C.rule}`,
-              color: C.text, fontFamily: mono, fontSize: 11, padding: "8px", height: "80px", resize: "none"
-            }}
-          />
-          <button 
-            onClick={extract} disabled={!input.trim() || loading}
-            style={{ 
-              width: "100%", marginTop: "10px", background: loading ? "transparent" : C.redDim, 
-              border: `1px solid ${C.redBd}`, color: loading ? C.dim : C.red, 
-              padding: "8px", fontFamily: mono, fontSize: 10, cursor: "pointer" 
-            }}
-          >
-            {loading ? "ANALYZING..." : "EXTRACT & REROUTE"}
-          </button>
-        </div>
-      </aside>
+      )}
     </div>
   );
 }
 
-function StatItem({ label, val, color }) {
+// ── MAIN APPLICATION ──────────────────────────────────────────────────────────
+
+export default function App() {
+  const [input, setInput] = useState("");
+  const [hospitalLoc, setHospitalLoc] = useState(LKO_BASE);
+  const [coldChain, setColdChain] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [match, setMatch] = useState(null);
+  const [eta, setEta] = useState("");
+  const [error, setError] = useState(null);
+
+  async function handleFindSupplier() {
+    setIsLoading(true); setError(null); setMatch(null);
+    try {
+      const res = await fetch("http://localhost:8080/api/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: input,
+          hospitalLocation: hospitalLoc,
+          requiresColdChain: coldChain
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMatch(data.match);
+        setEta(data.etaText);
+      } else {
+        setError(data.error || "No matching medical assets found.");
+      }
+    } catch (e) {
+      setError("SYS_ERR: Backend connection refused (Check Port 8080).");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   return (
-    <div style={{ marginBottom: 25 }}>
-      <div style={{ fontSize: 8, color: C.dim, letterSpacing: "0.1em" }}>{label}</div>
-      <div style={{ fontSize: 36, fontFamily: bebas, color, lineHeight: 1 }}>{val}</div>
+    <div style={{ width: "100%", height: "100vh", display: "grid", gridTemplateRows: "46px 1fr", gridTemplateColumns: "340px 1fr", background: C.bg, color: C.text, overflow: "hidden" }}>
+      
+      {/* HEADER */}
+      <header style={{ gridColumn: "1 / -1", background: C.panel, borderBottom: `1px solid ${C.ruleHard}`, display: "flex", alignItems: "center", padding: "0 18px" }}>
+        <Siren size={18} color={C.red} style={{ marginRight: 10 }} />
+        <span style={{ fontFamily: bebas, fontSize: 22, letterSpacing: "0.12em" }}>VITALROUTE // CRISIS CMD</span>
+      </header>
+
+      {/* LEFT INPUT PANEL */}
+      <aside style={{ background: C.panel, borderRight: `1px solid ${C.ruleHard}`, padding: 20, display: "flex", flexDirection: "column", gap: 20 }}>
+        <div>
+          <span style={{ fontFamily: mono, fontSize: 9, color: C.red, letterSpacing: "0.12em" }}>DISTRESS SIGNAL (AI PARSE)</span>
+          <textarea 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type emergency details here..."
+            className="vr-ta"
+            style={{ width: "100%", height: 100, background: C.bg, border: `1px solid ${C.rule}`, color: C.text, padding: 10, fontFamily: mono, fontSize: 12, marginTop: 8, resize: "none" }}
+          />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
+            <span style={{ fontFamily: mono, fontSize: 8, color: C.dim }}>LATITUDE</span>
+            <input type="number" value={hospitalLoc.lat} onChange={e => setHospitalLoc({...hospitalLoc, lat: parseFloat(e.target.value)})} style={{ width: "100%", background: C.bg, border: `1px solid ${C.rule}`, color: C.text, padding: 8, fontFamily: mono, fontSize: 11 }} />
+          </div>
+          <div>
+            <span style={{ fontFamily: mono, fontSize: 8, color: C.dim }}>LONGITUDE</span>
+            <input type="number" value={hospitalLoc.lng} onChange={e => setHospitalLoc({...hospitalLoc, lng: parseFloat(e.target.value)})} style={{ width: "100%", background: C.bg, border: `1px solid ${C.rule}`, color: C.text, padding: 8, fontFamily: mono, fontSize: 11 }} />
+          </div>
+        </div>
+
+        <button 
+          onClick={() => setColdChain(!coldChain)}
+          style={{ width: "100%", background: coldChain ? C.tealDim : "transparent", border: `1px solid ${coldChain ? C.tealBd : C.rule}`, padding: 12, color: coldChain ? C.teal : C.dim, fontFamily: mono, fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        >
+          <Snowflake size={14} /> {coldChain ? "COLD CHAIN REQUIRED" : "STANDARD TRANSIT"}
+        </button>
+
+        <button 
+          onClick={handleFindSupplier}
+          disabled={isLoading}
+          style={{ width: "100%", background: C.redDim, border: `1px solid ${C.redBd}`, color: C.red, padding: 14, fontFamily: mono, fontWeight: "bold", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}
+        >
+          {isLoading ? <Loader2 className="animate-spin" size={16} /> : <Zap size={16} />}
+          INITIATE MATCH
+        </button>
+
+        {error && <div style={{ color: C.red, fontFamily: mono, fontSize: 10, border: `1px solid ${C.redBd}`, padding: 10, background: C.redDim }}>{error}</div>}
+      </aside>
+
+      {/* MAIN RADAR VIEW */}
+      <main style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <div className="vr-scan-bg" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
+        <Radar activeMatch={match} />
+        
+        {/* MATCH RESULTS BLOCK */}
+        <div style={{ position: "absolute", bottom: 0, width: "100%", background: C.panel, borderTop: `1px solid ${C.ruleHard}`, padding: 20, height: 160 }}>
+          {match ? (
+            <div style={{ animation: "vr-reveal 0.3s ease both" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontFamily: mono, fontSize: 9, color: C.teal, border: `1px solid ${C.tealBd}`, padding: "2px 6px" }}>ATOMIC LOCK ACTIVE</span>
+                    {match.hasRefrigeration && <span style={{ fontFamily: mono, fontSize: 9, color: C.teal, border: `1px solid ${C.tealBd}`, padding: "2px 6px" }}>COLD CHAIN VERIFIED</span>}
+                  </div>
+                  <h2 style={{ fontFamily: bebas, fontSize: 32, color: C.text }}>{match.name}</h2>
+                  <p style={{ fontFamily: mono, fontSize: 11, color: C.mid }}>TYPE: {match.type.toUpperCase()} // STATUS: {match.status.toUpperCase()}</p>
+                </div>
+                <div style={{ textAlign: "right", background: C.tealDim, padding: "10px 20px", border: `1px solid ${C.tealBd}` }}>
+                  <span style={{ fontFamily: mono, fontSize: 9, color: C.teal }}>TRAFFIC-AWARE ETA</span>
+                  <div style={{ fontFamily: bebas, fontSize: 32, color: C.teal }}>{eta}</div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", opacity: 0.3 }}>
+              <Radio size={20} />
+              <span style={{ fontFamily: mono, fontSize: 12, marginLeft: 10 }}>AWAITING DISTRESS SIGNAL...</span>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

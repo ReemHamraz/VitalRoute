@@ -1,32 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Courier+Prime:wght@400;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply font-inter bg-obsidian text-slate m-0 p-0 overflow-hidden text-sm;
-  }
+
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-.glass-panel {
-  @apply bg-black/40 backdrop-blur-md border border-white/10 shadow-xl rounded-xl;
+body {
+  background-color: #0F0D0A;
+  color: #EDE8D2;
+  overflow: hidden;
 }
 
-.glass-panel-heavy {
-  @apply bg-black/60 backdrop-blur-xl border border-white/5 shadow-2xl rounded-2xl;
-}
+/* Claude's Terminal Animations */
+@keyframes radar-sweep { to { transform: rotate(360deg); } }
+@keyframes vr-ping  { 0%{transform:scale(1);opacity:.22} 70%{transform:scale(2.8);opacity:0} 100%{opacity:0} }
+@keyframes vr-ring  { 0%{transform:scale(.85);opacity:.5} 100%{transform:scale(2.2);opacity:0} }
+@keyframes vr-slide { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:translateX(0)} }
+@keyframes vr-reveal{ from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+@keyframes vr-in    { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+@keyframes spin     { to{transform:rotate(360deg)} }
 
-/* Custom scrollbar for inner elements if needed */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2); 
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1); 
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2); 
+/* Custom Scrollbars */
+.vr-ta::placeholder { color: rgba(237,232,210,0.2); font-family: 'Courier Prime', monospace; font-size: 12px; }
+.vr-ta:focus        { outline: none; }
+.vr-feed::-webkit-scrollbar       { width: 2px; }
+.vr-feed::-webkit-scrollbar-track { background: transparent; }
+.vr-feed::-webkit-scrollbar-thumb { background: rgba(224,56,32,0.25); }
+
+/* Topographical Grid */
+.vr-scan-bg {
+  background-image:
+    linear-gradient(rgba(237,228,210,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(237,228,210,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
 }
