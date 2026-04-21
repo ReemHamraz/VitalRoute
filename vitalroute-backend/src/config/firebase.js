@@ -24,7 +24,12 @@ try {
   process.exit(1);
 }
 
-const db         = admin.firestore();
+const db = admin.firestore();
+
+// THE GRPC BYPASS: Force Firebase to use standard HTTP instead of gRPC
+// This prevents Antivirus and Firewalls from stripping the auth token!
+db.settings({ preferRest: true });
+
 const auth       = admin.auth();
 const messaging  = admin.messaging();
 const FieldValue = admin.firestore.FieldValue;
