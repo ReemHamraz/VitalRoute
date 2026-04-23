@@ -10,16 +10,22 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-
   const systemPrompt = `You are a medical emergency logistics assistant for VitalRoute.
 Your ONLY job is to extract structured supply requests from natural language.
 Return ONLY valid JSON, no markdown, no explanation.
+
 Schema: {
-  "urgency": "NORMAL" | "URGENT" | "CRITICAL",
+  "heading": string, // e.g., "Cardiac Arrest Dispatch", "Routine Restock"
+  "urgency": "NORMAL" | "HIGH" | "CRITICAL",
+  "requiresColdChain": boolean,
   "items": [{ "category": "blood|oxygen|medicine|equipment|organ", "name": string, "quantity": number, "unit": string }],
   "context_note": string,
   "flags": ["mass_casualty" | "pediatric" | "surgical" | "organ_transplant" | "none"]
 }
+
 Rules:
-- Infer urgency from context if not stated (accident = CRITICAL, running low = URGENT, routine = NORMAL)
-- If quantity is not stated, set quantity to 1
-- Never hallucinate items not mentioned
+- RULES FOR URGENCY: "CRITICAL" (life-threat, minutes matter, e.g., Cardiac Arrest, accidents), "HIGH" (urgent but stable), "NORMAL" (scheduled procedures, future needs, e.g., "surgery in 10 days").
+- HEADING: Create a specific 2-4 word medical title based on the text. Do NOT use generic terms like "Emergency Service".
+- COLD CHAIN: Set "requiresColdChain" to true ONLY IF the requested items include blood, organs, or temperature-sensitive medications.
+- If quantity is not stated, set quantity to 1.
+- Never hallucinate items not mentioned.
 - If the message is not a supply request, return { "error": "not_a_supply_request" }`;
 
   const payload = {

@@ -3,12 +3,52 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const { getEtaBatch } = require('../services/mapsService');
 
+// 1. IMPORT YOUR AI SERVICE HERE
+const { parseCrisisCommand } = require('../services/geminiService'); // Make sure this path is correct!
+
 router.post('/', async (req, res) => {
+
   try {
-    const { hospitalLocation, requiresColdChain } = req.body;
+
+    // 2. EXTRACT 'text' FROM THE FRONTEND REQUEST
+
+    const { hospitalLocation, requiresColdChain, text } = req.body;
+
     const db = admin.firestore();
 
-    // 1. Fetch all available suppliers from your database
+
+
+    // 3. LET GEMINI ANALYZE THE EMERGENCY
+
+    let aiAnalysis = null;
+
+    let needsColdChain = requiresColdChain; // Default to whatever the frontend toggle says
+
+
+
+    if (text && text.trim() !== "") {
+
+      console.log(`🧠 AI Analyzing Emergency: "${text}"`);
+
+      // Pass the text to Gemini
+
+      aiAnalysis = await parseCrisisCommand(text, "hosp_lucknow_01");
+
+     
+
+      // Override the manual UI toggle with Gemini's intelligence!
+
+      // If Gemini says it needs a cold chain (e.g. for blood), force it to true.
+
+      if (aiAnalysis.requiresColdChain === true) {
+
+          needsColdChain = true;
+
+      }
+
+    }
+
+    // 4. Fetch all available suppliers
     const suppliersSnapshot = await db.collection('suppliers').where('status', '==', 'active').get();
     let availableSuppliers = [];
     
@@ -16,8 +56,8 @@ router.post('/', async (req, res) => {
       availableSuppliers.push({ id: doc.id, ...doc.data() });
     });
 
-    // 2. FEATURE 2: COLD CHAIN FILTERING
-    if (requiresColdChain) {
+    // 5. FEATURE 2: COLD CHAIN FILTERING (Now powered by AI!)
+    if (needsColdChain) {
       availableSuppliers = availableSuppliers.filter(s => s.hasRefrigeration === true);
     }
 
@@ -25,22 +65,22 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ success: false, message: "No suitable suppliers found." });
     }
 
-    // 3. FEATURE 1: LIVE TRAFFIC ETA CALCULATION
-    // Send the hospital coords and the array of supplier coords to Google Maps
+    // 6. FEATURE 1: LIVE TRAFFIC ETA CALCULATION
     const rankedSuppliers = await getEtaBatch(
       hospitalLocation.lat, 
       hospitalLocation.lng, 
       availableSuppliers
     );
 
-    // 4. THE STEP 3 SORTING LOGIC!
+    // ... YOUR EXISTING SORTING AND FIRESTORE LOCKING LOGIC STAYS EXACTLY THE SAME BELOW THIS LINE ...
+    // 7. THE STEP 3 SORTING LOGIC!
     // Sort the array mathematically from fastest (lowest seconds) to slowest
     rankedSuppliers.sort((a, b) => a.duration - b.duration);
 
-   // 5. Grab the absolute fastest supplier (index 0)
+   // 8. Grab the absolute fastest supplier (index 0)
     const fastestSupplier = rankedSuppliers[0];
 
-    // 6. FEATURE 3: FIRESTORE TRANSACTION (INVENTORY LOCK)
+    // 9. FEATURE 3: FIRESTORE TRANSACTION (INVENTORY LOCK)
     const supplierRef = db.collection('suppliers').doc(fastestSupplier.id);
 
     try {
@@ -72,11 +112,12 @@ router.post('/', async (req, res) => {
       // If we reach this line, the transaction was 100% successful and locked.
       console.log(`🔒 Successfully locked asset: ${fastestSupplier.name}`);
 
-      // 7. Return the absolute winner to the React frontend
+      // 10. Return the absolute winner to the React frontend
       return res.json({
         success: true,
         match: fastestSupplier,
-        etaText: `${Math.round(fastestSupplier.duration / 60)} mins in current traffic`
+        etaText: `${Math.round(fastestSupplier.duration / 60)} mins in current traffic`,
+        emergencyDetails: aiAnalysis // <--- ADD THIS LINE!
       });
 
     } catch (transactionError) {
