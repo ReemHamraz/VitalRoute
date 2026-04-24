@@ -267,15 +267,29 @@ function DetailStrip({ entry, onDispatch }) {
 
 // ── FEED CARD ─────────────────────────────────────────────────────────────────
 
+// ── FEED CARD ─────────────────────────────────────────────────────────────────
+
 function FeedCard({ entry, isNew, isActive, onClick }) {
-  const u = URGENCY[entry.urgency] || URGENCY.LOW;
+  // Check if this specific entry has been dispatched
+  const isDispatched = entry.dispatched;
+  
+  // Base urgency from your backend
+  const urgencyKey = entry.emergencyDetails?.urgency || entry.urgency;
+  const baseUrgency = URGENCY[urgencyKey] || URGENCY.LOW;
+
+  // OVERRIDE: If dispatched, turn the UI elements tactical Yellow
+  const u = isDispatched 
+    ? { ...baseUrgency, color: "#EAB308", dim: "rgba(234,179,8,0.1)", bd: "rgba(234,179,8,0.3)" } 
+    : baseUrgency;
+
   return (
     <div onClick={onClick} style={{
       borderBottom: `1px solid ${C.rule}`,
       background: isActive ? u.dim : "transparent",
-      borderLeft: `3px solid ${isActive ? u.color : "transparent"}`,
+      borderLeft: `3px solid ${isActive || isDispatched ? u.color : "transparent"}`,
       padding: "11px 14px 11px 12px",
       cursor: "pointer", transition: "background 0.18s",
+      opacity: isDispatched ? 0.7 : 1, // Fades slightly to show it is handled
       animation: isNew ? "vr-slide 0.4s cubic-bezier(0.22,1,0.36,1)" : "none",
     }}
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = C.faint; }}
@@ -283,13 +297,24 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {entry.urgency === "CRITICAL" && <Ping color={C.red} sz={4} />}
-          <Badge level={entry.urgency} />
+          {/* Change the badge text to EN ROUTE if dispatched */}
+          {isDispatched ? (
+             <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.18em", padding: "2px 6px", background: u.dim, border: `1px solid ${u.bd}`, color: u.color }}>
+               EN ROUTE
+             </span>
+          ) : (
+            <>
+              {urgencyKey === "CRITICAL" && <Ping color={C.red} sz={4} />}
+              <Badge level={urgencyKey} />
+            </>
+          )}
         </div>
         <span style={{ fontFamily: mono, fontSize: 9, color: C.dim, letterSpacing: "0.08em" }}>{entry.ts}</span>
       </div>
 
-      <div style={{ fontFamily: bebas, fontSize: 17, color: C.text, letterSpacing: "0.05em", lineHeight: 1.1, marginBottom: 4 }}>{entry.title}</div>
+      <div style={{ fontFamily: bebas, fontSize: 17, color: isDispatched ? "#EAB308" : C.text, letterSpacing: "0.05em", lineHeight: 1.1, marginBottom: 4 }}>
+        {entry.emergencyDetails?.heading || entry.title}
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 7 }}>
         <MapPin size={9} color={C.dim} />
@@ -297,19 +322,11 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 7 }}>
-        {entry.items.map((item, i) => (
+        {(entry.emergencyDetails?.items || entry.items).map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 5 }}>
-            <span style={{ fontFamily: bebas, fontSize: 14, color: u.color, lineHeight: 1 }}>{item.q}</span>
-            <span style={{ fontFamily: mono, fontSize: 9, color: C.mid }}>{item.u} {item.n}</span>
+            <span style={{ fontFamily: bebas, fontSize: 14, color: u.color, lineHeight: 1 }}>{item.quantity || item.q}</span>
+            <span style={{ fontFamily: mono, fontSize: 9, color: C.mid }}>{item.unit || item.u ? (item.unit || item.u) + " " : ""}{item.name || item.n}</span>
           </div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-        {entry.flags.map((f, i) => (
-          <span key={i} style={{ fontFamily: mono, fontSize: 8, letterSpacing: "0.1em", color: C.dim, border: `1px solid ${C.rule}`, padding: "1px 5px" }}>
-            {f.toUpperCase()}
-          </span>
         ))}
       </div>
     </div>
@@ -327,7 +344,7 @@ export default function VitalRoute() {
   const [newId, setNewId]     = useState(null);
   const [activeId, setActiveId] = useState(SEED[1].id);
   const [isListening, setIsListening] = useState(false);
-
+  const [dispatchedCount, setDispatchedCount] = useState(14);
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -359,9 +376,24 @@ export default function VitalRoute() {
   };
   const feedRef = useRef(null);
   const active = feed.find(f => f.id === activeId) || feed[0];
+
   const handleDispatch = (idToDispatch) => {
-    setFeed(prevFeed => prevFeed.filter(item => item.id !== idToDispatch));
-    setActiveId(prevId => prevId === idToDispatch ? null : prevId);
+    // 1. Mark the item as dispatched (turns it yellow in the UI)
+    setFeed(prevFeed => prevFeed.map(item => 
+      item.id === idToDispatch ? { ...item, dispatched: true } : item
+    ));
+    
+    // 2. Increment the sidebar counter
+    setDispatchedCount(prev => prev + 1);
+
+    // 3. Set a 10-minute timer to completely remove it from the radar/feed
+    // Note: 10 minutes = 600,000 ms. (Change to 5000 if you want to test it in 5 seconds!)
+    setTimeout(() => {
+      setFeed(prevFeed => prevFeed.filter(item => item.id !== idToDispatch));
+      
+      // If the user happens to still be looking at this card when it expires, clear the view
+      setActiveId(prevId => prevId === idToDispatch ? null : prevId);
+    }, 600000); 
   };
   
   useEffect(() => { if (feedRef.current) feedRef.current.scrollTop = 0; }, [feed]);
@@ -380,41 +412,41 @@ export default function VitalRoute() {
         }),
       });
 
+      if (!res.ok) throw new Error(`Server Error: ${res.status}. Check CORS in index.js`);
+
       const data = await res.json();
-      
-      if (!res.ok || !data.success) {
-         throw new Error(data.error || "No supplier match found.");
-      }
+      if (!data.success) throw new Error(data.error || "Match failed.");
 
       const now  = new Date();
       const ts   = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       
+      // THE FIX: Directly mapping the AI's "emergencyDetails" object from your backend
       const entry = { 
         id: Date.now(), 
         ts, 
-        title: data.title || "EMERGENCY LOGISTICS REQUEST",
-        urgency: input.toLowerCase().includes("critical") || input.toLowerCase().includes("casualty") ? "CRITICAL" : "HIGH",
+        title: data.emergencyDetails?.heading || "EMERGENCY LOGISTICS REQUEST",
+        urgency: data.emergencyDetails?.urgency || "HIGH",
         loc: data.match.name,
-        items: data.items || [{ n: "Requested Assets", q: 1, u: "batch" }],
-        flags: [coldChain ? "Cold Chain" : "Standard", data.match.status],
+        // Safely reads the items array, keeping your fallback just in case
+        items: data.emergencyDetails?.items || [{ name: "Requested Assets", quantity: 1, unit: "batch" }],
+        flags: [coldChain ? "Cold Chain" : "Standard", data.match.status || "Active"],
         coords: { x: 32 + Math.random() * 36, y: 28 + Math.random() * 40 },
         etaText: data.etaText,
-        matchInfo: data.match
+        matchInfo: data.match,
+        emergencyDetails: data.emergencyDetails // Passes the whole object down
       };
       
-      setNewId(entry.id); 
       setActiveId(entry.id);
       setFeed(prev => [entry, ...prev]);
       setInput("");
-      setTimeout(() => setNewId(null), 2000);
       
     } catch (err) { 
-        setError(err.message || "Parse failed — check backend connection."); 
+        console.error(err);
+        setError("Fetch failed. Is backend running? Are ports correct?"); 
     } finally { 
         setLoading(false); 
     }
   }
-
   const btnOn = input.trim() && !loading;
 
   return (
@@ -504,9 +536,24 @@ export default function VitalRoute() {
 
           {/* Stat blocks */}
           {[
-            { label: "ACTIVE INCIDENTS",  val: feed.filter(f => f.urgency === "CRITICAL" || f.urgency === "HIGH").length, color: C.red,    sub: "↑ 2 PAST HOUR" },
-            { label: "REQUESTS QUEUED",   val: feed.length, color: C.orange, sub: `${feed.filter(f => f.urgency === "CRITICAL").length} CRITICAL` },
-            { label: "UNITS DISPATCHED",  val: 14,          color: C.teal,   sub: "AVG ETA 8 MIN" },
+            { 
+              label: "ACTIVE INCIDENTS",  
+              val: feed.filter(f => !f.dispatched && (f.urgency === "CRITICAL" || f.urgency === "HIGH")).length, 
+              color: C.red,    
+              sub: "REQUIRES IMMEDIATE ACTION" 
+            },
+            { 
+              label: "REQUESTS QUEUED",   
+              val: feed.filter(f => !f.dispatched).length, 
+              color: C.orange, 
+              sub: "AWAITING DISPATCH" 
+            },
+            { 
+              label: "UNITS DISPATCHED",  
+              val: dispatchedCount,          
+              color: C.teal,   
+              sub: "ASSETS EN ROUTE" 
+            },
           ].map((s, i) => (
             <div key={i} style={{ padding: "16px 14px", borderBottom: `1px solid ${C.rule}`, flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.16em", marginBottom: 4 }}>{s.label}</div>
