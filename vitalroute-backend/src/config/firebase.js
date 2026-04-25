@@ -1,23 +1,23 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
-const path = require('path');
 
-// 1. THE SLEDGEHAMMER: Calculate the exact C:\Users\... path to your file
-// Adjust '../../serviceAccountKey.json' depending on where this file is relative to the root
-const absoluteKeyPath = path.resolve(__dirname, '../../serviceAccountKey.json');
-
-// 2. Force the underlying Google gRPC network layer to use this exact file
-process.env.GOOGLE_APPLICATION_CREDENTIALS = absoluteKeyPath;
+let serviceAccount;
 
 try {
+  // ☁️ CLOUD MODE: If deployed, read the secret from the Environment Variable
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    // 💻 LOCAL MODE: Clean, relative path. Node handles the parsing automatically.
+    serviceAccount = require('../../serviceAccountKey.json');
+  }
+
   if (!admin.apps.length) {
-    const serviceAccount = require(absoluteKeyPath);
-    
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       projectId: serviceAccount.project_id
     });
-    console.log(`🔥 Firebase Admin connected via ABSOLUTE PATH: \n   ${absoluteKeyPath}`);
+    console.log('🔥 Firebase Admin connected securely.');
   }
 } catch (error) {
   console.error('Firebase Admin initialization error:', error.message);
@@ -26,8 +26,8 @@ try {
 
 const db = admin.firestore();
 
-// THE GRPC BYPASS: Force Firebase to use standard HTTP instead of gRPC
-// This prevents Antivirus and Firewalls from stripping the auth token!
+// THE GRPC BYPASS: This is the most important line. 
+// It forces standard HTTP/REST which bypasses the Windows Antivirus/Firewall issues.
 db.settings({ preferRest: true });
 
 const auth       = admin.auth();

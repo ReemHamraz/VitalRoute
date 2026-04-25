@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { GoogleMap, useJsApiLoader, OverlayViewF, DirectionsService, DirectionsRenderer } from "@react-google-maps/api";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   AlertTriangle, Zap, Droplet, MapPin, Siren,
   Loader2, TrendingUp, Navigation, ChevronRight,
@@ -45,20 +46,39 @@ const URGENCY = {
 };
 
 const SEED = [
-  { id: 1, ts: "08:41", loc: "Memorial Hospital, Bay 4", urgency: "HIGH",
+  { 
+    id: 1, ts: "08:41", loc: "Memorial Hospital, Bay 4", urgency: "HIGH",
     items: [{ n: "O-negative blood", q: 4, u: "units" }, { n: "Plasma", q: 2, u: "bags" }],
-    flags: ["Trauma", "Surgical standby"], title: "Post-op Haemorrhage", coords: { x: 58, y: 37 } },
-  { id: 2, ts: "08:39", loc: "I-95 Interchange, Mile 142", urgency: "CRITICAL",
+    flags: ["Trauma", "Surgical standby"], title: "Post-op Haemorrhage", 
+    coords: { x: 58, y: 37, lat: 26.8750, lng: 80.9300 }, 
+    etaText: "14 mins in current traffic",
+    matchInfo: { name: "Red Cross Blood Bank", lat: 26.8650, lng: 80.9400, id: "sup-01", hasRefrigeration: true }
+  },
+  { 
+    id: 2, ts: "08:39", loc: "I-95 Interchange, Mile 142", urgency: "CRITICAL",
     items: [{ n: "O-negative blood", q: 10, u: "units" }, { n: "Burn dressings", q: 20, u: "kits" }, { n: "Morphine", q: 6, u: "vials" }],
-    flags: ["Mass casualty", "Pileup", "Fire hazard"], title: "Multi-Vehicle Collision", coords: { x: 34, y: 62 } },
-  { id: 3, ts: "08:35", loc: "St. Raphael Pediatric Ward", urgency: "MODERATE",
+    flags: ["Mass casualty", "Pileup", "Fire hazard"], title: "Multi-Vehicle Collision", 
+    coords: { x: 34, y: 62, lat: 26.8520, lng: 80.9150 }, 
+    etaText: "8 mins in current traffic",
+    matchInfo: { name: "City Emergency Hub", lat: 26.8450, lng: 80.9250, id: "sup-02", hasRefrigeration: true }
+  },
+  { 
+    id: 3, ts: "08:35", loc: "St. Raphael Pediatric Ward", urgency: "MODERATE",
     items: [{ n: "AB-positive blood", q: 2, u: "units" }, { n: "Epinephrine", q: 4, u: "doses" }],
-    flags: ["Pediatric", "Allergic reaction"], title: "Anaphylaxis — Age 7", coords: { x: 65, y: 26 } },
-  { id: 4, ts: "08:28", loc: "Downtown Fire Station 7", urgency: "LOW",
+    flags: ["Pediatric", "Allergic reaction"], title: "Anaphylaxis — Age 7", 
+    coords: { x: 65, y: 26, lat: 26.8850, lng: 80.9400 }, 
+    etaText: "12 mins in current traffic",
+    matchInfo: { name: "Apollo Pharmacy Hub", lat: 26.8950, lng: 80.9500, id: "sup-03", hasRefrigeration: true }
+  },
+  { 
+    id: 4, ts: "08:28", loc: "Downtown Fire Station 7", urgency: "LOW",
     items: [{ n: "Saline IV", q: 6, u: "bags" }],
-    flags: ["Routine"], title: "Station Resupply", coords: { x: 50, y: 74 } },
+    flags: ["Routine"], title: "Station Resupply", 
+    coords: { x: 50, y: 74, lat: 26.8400, lng: 80.9200 }, 
+    etaText: "10 mins in current traffic",
+    matchInfo: { name: "Central Medical Supply", lat: 26.8350, lng: 80.9150, id: "sup-04", hasRefrigeration: false }
+  }
 ];
-
 const R = 148; // radar radius px
 const D = R * 2;
 
@@ -161,50 +181,52 @@ function Radar({ entries, activeId, onSelect }) {
   );
 }
 
+
 // ── INCIDENT DETAIL STRIP ─────────────────────────────────────────────────────
 
 
 function DetailStrip({ entry, onDispatch }) {
-  // Smart Urgency Fallback (Prioritizes backend emergencyDetails)
+  const isDispatched = entry.dispatched;
   const urgencyKey = entry.emergencyDetails?.urgency || entry.urgency;
-  const u = URGENCY[urgencyKey] || URGENCY.LOW;
-  
-  const [dispatchStatus, setDispatchStatus] = useState("pending");
+  const baseUrgency = URGENCY[urgencyKey] || URGENCY.LOW;
 
-  // Reset status when a new emergency is selected
-  useEffect(() => {
-    setDispatchStatus("pending");
-  }, [entry.id]);
+  // OVERRIDE: Turn center console yellow if dispatched
+  const u = isDispatched 
+    ? { ...baseUrgency, color: "#EAB308", dim: "rgba(234,179,8,0.15)", bd: "rgba(234,179,8,0.4)" } 
+    : baseUrgency;
 
-  // Smart Items Array (Prioritizes backend emergencyDetails)
   const itemsToRender = entry.emergencyDetails?.items || entry.items;
 
   return (
-    <div style={{ width: "100%", borderTop: `1px solid ${u.bd}`, background: u.dim, display: "flex", gap: 0, animation: "vr-reveal 0.3s ease both" }}>
+    <div style={{ 
+      width: "100%", borderTop: `1px solid ${u.bd}`, background: u.dim, 
+      display: "flex", animation: "vr-reveal 0.3s ease both",
+      overflow: "hidden" // THE FIX: Prevents the container from bleeding into the right panel
+    }}>
       
       {/* 1. Dynamic Identity Block */}
-      <div style={{ padding: "12px 16px", borderRight: `1px solid ${C.rule}`, minWidth: 190, flexShrink: 0 }}>
+      <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 25%", minWidth: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
           <Ping color={u.color} sz={4} />
           <span style={{ fontFamily: mono, fontSize: 9, color: u.color, letterSpacing: "0.16em" }}>
             {urgencyKey.toUpperCase()}
           </span>
         </div>
-        <div style={{ fontFamily: bebas, fontSize: 22, color: C.text, letterSpacing: "0.06em", lineHeight: 1.05, marginBottom: 4 }}>
+        <div style={{ fontFamily: bebas, fontSize: 20, color: C.text, letterSpacing: "0.06em", lineHeight: 1.05, marginBottom: 4, wordBreak: "break-word" }}>
           {entry.emergencyDetails?.heading || entry.title}
         </div>
       </div>
 
       {/* 2. Dynamic Items Block */}
-      <div style={{ padding: "12px 16px", borderRight: `1px solid ${C.rule}`, flex: 1 }}>
+      <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 30%", minWidth: 100 }}>
         <div style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.16em", marginBottom: 7 }}>REQUESTED SUPPLIES</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {itemsToRender.map((item, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+            <div key={i} style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
               <span style={{ fontFamily: bebas, fontSize: 16, color: u.color, letterSpacing: "0.05em", lineHeight: 1 }}>
                 {item.quantity || item.q}
               </span>
-              <span style={{ fontFamily: mono, fontSize: 9, color: C.mid, letterSpacing: "0.04em" }}>
+              <span style={{ fontFamily: mono, fontSize: 9, color: C.mid, letterSpacing: "0.04em", wordBreak: "break-word" }}>
                 {item.u ? item.u.toUpperCase() + " " : "x "}{item.name || item.n}
               </span>
             </div>
@@ -212,45 +234,52 @@ function DetailStrip({ entry, onDispatch }) {
         </div>
       </div>
 
-      {/* Match Info & ETA */}
+      {/* 3. Match Info & ETA */}
       {entry.matchInfo ? (
-         <div style={{ padding: "12px 14px", borderRight: `1px solid ${C.rule}`, minWidth: 150, flexShrink: 0, background: C.tealDim }}>
-            <div style={{ fontFamily: mono, fontSize: 8, color: C.teal, letterSpacing: "0.16em", marginBottom: 7 }}>LIVE ETA (HAVERSINE)</div>
-            <div style={{ fontFamily: bebas, fontSize: 24, color: C.teal, lineHeight: 1 }}>{entry.etaText}</div>
+         <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 20%", minWidth: 110, background: C.tealDim }}>
+            <div style={{ fontFamily: mono, fontSize: 8, color: C.teal, letterSpacing: "0.16em", marginBottom: 7 }}>LIVE ETA (GOOGLE)</div>
+            <div style={{ fontFamily: bebas, fontSize: 22, color: C.teal, lineHeight: 1, wordBreak: "break-word" }}>{entry.etaText}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 6 }}>
-               <span style={{ fontFamily: mono, fontSize: 8, color: C.teal }}>ID: {entry.matchInfo.id}</span>
+               <span style={{ fontFamily: mono, fontSize: 8, color: C.teal, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>ID: {entry.matchInfo.id}</span>
                {entry.matchInfo.hasRefrigeration && <span style={{ fontFamily: mono, fontSize: 8, color: C.teal }}>❄ COLD CHAIN ACTIVE</span>}
             </div>
          </div>
       ) : (
-        <div style={{ padding: "12px 14px", borderRight: `1px solid ${C.rule}`, width: 140, flexShrink: 0 }}>
+        <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 15%", minWidth: 90 }}>
           <div style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.16em", marginBottom: 7 }}>FLAGS</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {entry.flags.map((f, i) => (
-              <span key={i} style={{ fontFamily: mono, fontSize: 9, color: C.mid }}>• {f.toUpperCase()}</span>
+              <span key={i} style={{ fontFamily: mono, fontSize: 9, color: C.mid, wordBreak: "break-word" }}>• {f.toUpperCase()}</span>
             ))}
           </div>
         </div>
       )}
       
-      {/* 3. Conditional Dispatch UI */}
-      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 120, flexShrink: 0 }}>
-        {dispatchStatus === "en_route" ? (
+      {/* 4. Conditional Dispatch UI */}
+      <div style={{ padding: "12px", display: "flex", alignItems: "center", justifyContent: "flex-end", flex: "1 1 25%", minWidth: 130 }}>
+        {isDispatched ? (
           <div style={{ 
-            fontFamily: mono, fontSize: 11, color: C.teal, letterSpacing: "0.1em",
-            display: "flex", alignItems: "center", gap: 6, fontWeight: "bold",
-            textShadow: `0 0 8px ${C.teal}`, animation: "vr-ping 2s infinite" 
+            fontFamily: mono, color: "#EAB308", textAlign: "right",
+            display: "flex", flexDirection: "column", gap: 4,
+            wordBreak: "break-word", whiteSpace: "normal" // THE FIX: Forces long text to stack
           }}>
-            🚚 EN ROUTE<br/>{entry.etaText}
+            <span style={{ fontSize: 11, fontWeight: "bold", letterSpacing: "0.1em", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 5, flexWrap: "wrap" }}>
+              <Navigation size={12} color={"#EAB308"} style={{ marginTop: 2, flexShrink: 0 }} /> 
+              <span>ASSETS DISPATCHED</span>
+            </span>
+            <span style={{ fontSize: 9, color: C.text, lineHeight: 1.4, opacity: 0.8 }}>
+              Will reach in {entry.etaText || "calculating..."}
+            </span>
           </div>
         ) : (
           <button 
             type="button"
-            onClick={() => setDispatchStatus("en_route")} // Changes state instead of deleting
+            onClick={() => onDispatch(entry.id)} 
             style={{ 
               fontFamily: mono, fontSize: 10, letterSpacing: "0.14em", color: u.color, 
               background: u.dim, border: `1px solid ${u.bd}`, padding: "8px 14px", 
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s" 
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 6, transition: "background 0.2s",
+              flexShrink: 0
             }}
             onMouseEnter={e => e.currentTarget.style.background = u.bd.replace("0.36","0.22")}
             onMouseLeave={e => e.currentTarget.style.background = u.dim}
@@ -265,7 +294,6 @@ function DetailStrip({ entry, onDispatch }) {
 }
 
 
-// ── FEED CARD ─────────────────────────────────────────────────────────────────
 
 // ── FEED CARD ─────────────────────────────────────────────────────────────────
 
@@ -336,6 +364,7 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
 export default function VitalRoute() {
+  // 1. ALL STATE VARIABLES
   const [feed, setFeed]       = useState(SEED);
   const [input, setInput]     = useState("");
   const [coldChain, setColdChain] = useState(true);
@@ -344,7 +373,63 @@ export default function VitalRoute() {
   const [newId, setNewId]     = useState(null);
   const [activeId, setActiveId] = useState(SEED[1].id);
   const [isListening, setIsListening] = useState(false);
+  const [directionsResponse, setDirectionsResponse] = useState(null);
+  const [viewMode, setViewMode] = useState("radar");
   const [dispatchedCount, setDispatchedCount] = useState(14);
+
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY 
+  });
+
+  // Helper variable for the currently selected incident
+  const active = feed.find(f => f.id === activeId) || feed[0];
+
+  // THE FIX: Memorize Map Settings to prevent re-render bouncing
+  const mapCenter = useMemo(() => ({ lat: 26.8638, lng: 80.9228 }), []);
+  const mapContainerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
+  const mapOptions = useMemo(() => ({ 
+    disableDefaultUI: true, 
+    gestureHandling: "greedy",
+    backgroundColor: C.bg 
+  }), []);
+
+  // 2. ROUTING LOGIC: Reset the path whenever the active emergency changes
+  useEffect(() => {
+    setDirectionsResponse(null);
+  }, [activeId]);
+
+  // 3. ROUTING LOGIC: The Native Google Maps Engine
+  useEffect(() => {
+    // Only fire if the map is loaded, we have an active incident, and it has been dispatched
+    if (!isLoaded || !active || !active.dispatched) return;
+
+    const directionsService = new window.google.maps.DirectionsService();
+
+    // Safely parse the exact coordinates from the supplier (matchInfo)
+    const origin = active.matchInfo?.lat
+      ? { lat: Number(active.matchInfo.lat), lng: Number(active.matchInfo.lng) }
+      : { lat: 26.8638, lng: 80.9228 }; // Fallback to Lucknow Base
+
+    const destination = { lat: Number(active.coords.lat), lng: Number(active.coords.lng) };
+
+    directionsService.route(
+      {
+        origin: origin,
+        destination: destination,
+        travelMode: window.google.maps.TravelMode.DRIVING,
+      },
+      (result, status) => {
+        if (status === window.google.maps.DirectionsStatus.OK) {
+          setDirectionsResponse(result);
+        } else {
+          console.error(`Native Route Error: ${status}`);
+        }
+      }
+    );
+  }, [isLoaded, active?.id, active?.dispatched, active?.matchInfo]);
+
+  // 4. SPEECH RECOGNITION LOGIC
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -352,7 +437,7 @@ export default function VitalRoute() {
       alert("Your browser does not support voice input. Please use Chrome or Edge.");
       return;
     }
-
+  
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
@@ -374,8 +459,9 @@ export default function VitalRoute() {
 
     recognition.start();
   };
+ 
   const feedRef = useRef(null);
-  const active = feed.find(f => f.id === activeId) || feed[0];
+
 
   const handleDispatch = (idToDispatch) => {
     // 1. Mark the item as dispatched (turns it yellow in the UI)
@@ -427,15 +513,19 @@ export default function VitalRoute() {
         title: data.emergencyDetails?.heading || "EMERGENCY LOGISTICS REQUEST",
         urgency: data.emergencyDetails?.urgency || "HIGH",
         loc: data.match.name,
-        // Safely reads the items array, keeping your fallback just in case
         items: data.emergencyDetails?.items || [{ name: "Requested Assets", quantity: 1, unit: "batch" }],
         flags: [coldChain ? "Cold Chain" : "Standard", data.match.status || "Active"],
-        coords: { x: 32 + Math.random() * 36, y: 28 + Math.random() * 40 },
+        // THE FIX: Adding lat/lng so new emergencies appear on the live map
+        coords: { 
+          x: 32 + Math.random() * 36, 
+          y: 28 + Math.random() * 40,
+          lat: 26.8638 + (Math.random() - 0.5) * 0.08, // Generates a random GPS point nearby
+          lng: 80.9228 + (Math.random() - 0.5) * 0.08  // Generates a random GPS point nearby
+        },
         etaText: data.etaText,
         matchInfo: data.match,
-        emergencyDetails: data.emergencyDetails // Passes the whole object down
+        emergencyDetails: data.emergencyDetails 
       };
-      
       setActiveId(entry.id);
       setFeed(prev => [entry, ...prev]);
       setInput("");
@@ -466,6 +556,13 @@ export default function VitalRoute() {
 
         .vr-ta::placeholder { color: rgba(237,232,210,0.2); font-family: 'Courier Prime', monospace; font-size: 12px; }
         .vr-ta:focus        { outline: none; }
+        
+        /* THE FIX: Hide scrollbar for Chrome, Safari and Opera */
+        .vr-ta::-webkit-scrollbar { display: none; }
+        
+        /* THE FIX: Hide scrollbar for IE, Edge and Firefox */
+        .vr-ta { -ms-overflow-style: none; scrollbar-width: none; }
+
         .vr-feed::-webkit-scrollbar       { width: 2px; }
         .vr-feed::-webkit-scrollbar-track { background: transparent; }
         .vr-feed::-webkit-scrollbar-thumb { background: rgba(224,56,32,0.25); }
@@ -572,6 +669,7 @@ export default function VitalRoute() {
         </div>
 
         {/* ══ CENTER — RADAR + DETAIL STRIP ════════════════════════════════════ */}
+
         <div style={{
           gridColumn: "2", gridRow: "2",
           display: "flex", flexDirection: "column",
@@ -586,7 +684,34 @@ export default function VitalRoute() {
           <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(224,56,32,0.05) 0%, transparent 65%)", pointerEvents: "none" }} />
 
           {/* Radar section — fills center vertically */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "0 0 10px", width: "100%", paddingBottom: active ? 0 : 10 }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "0 0 10px", width: "100%", paddingBottom: active ? 0 : 10, position: "relative" }}>
+            
+          {/*  iOS-STYLE TOGGLE SWITCH */}
+            <div 
+              onClick={() => setViewMode(prev => prev === "radar" ? "satellite" : "radar")}
+              style={{ 
+                position: "absolute", top: 0, right: 10, zIndex: 20, 
+                display: "flex", alignItems: "center", gap: 8, cursor: "pointer" 
+              }}
+            >
+              <span style={{ fontFamily: mono, fontSize: 9, color: C.teal, letterSpacing: "0.1em" }}>
+                {viewMode === "radar" ? "TACTICAL" : "SATELLITE"}
+              </span>
+              <div style={{ 
+                position: "relative", width: 36, height: 20, 
+                background: viewMode === "satellite" ? C.teal : C.dim, 
+                borderRadius: 20, transition: "background 0.3s" 
+              }}>
+                <div style={{ 
+                  position: "absolute", top: 2, 
+                  left: viewMode === "satellite" ? 18 : 2, 
+                  width: 16, height: 16, background: C.bg, borderRadius: "50%", 
+                  transition: "all 0.3s cubic-bezier(0.23, 1, 0.32, 1)", 
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.3)" 
+                }} />
+              </div>
+            </div>
+
             {/* Section label */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ height: 1, width: 40, background: C.rule }} />
@@ -594,10 +719,119 @@ export default function VitalRoute() {
               <div style={{ height: 1, width: 40, background: C.rule }} />
             </div>
 
-            <Radar entries={feed} activeId={activeId} onSelect={setActiveId} />
+            {/* SEAMLESS CONDITIONAL RENDER */}
+            {viewMode === "radar" ? (
+              <Radar entries={feed} activeId={activeId} onSelect={setActiveId} />
+            ) : (
+              /* FULL SCREEN MAP WRAPPER */
+              <div style={{ flex: 1, width: "100%", height: "100%", minHeight: 300, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.ruleHard}`, position: "relative" }}>
+                {isLoaded ? (
+                  <GoogleMap
+                    mapContainerStyle={mapContainerStyle} // <--- Using memoized style
+                    center={mapCenter}                    // <--- Using memoized center
+                    zoom={14}
+                    mapTypeId="hybrid"
+                    options={mapOptions}                  // <--- Using memoized options
 
-            {/* Incident count underneath radar */}
-            <div style={{ display: "flex", gap: 18 }}>
+                  >
+                    
+                    {/* 2. RENDER THE BLUE (TEAL) PATH */}
+                    {directionsResponse && active && active.dispatched && (
+                      <DirectionsRenderer
+                        options={{
+                          directions: directionsResponse,
+                          suppressMarkers: true, 
+                          polylineOptions: {
+                            strokeColor: "#3D8A78", // Command Center Teal
+                            strokeWeight: 4,
+                            strokeOpacity: 0.8,
+                          },
+                        }}
+                      />
+                    )}
+
+                    {/* NEW: 2.5 RENDER THE SUPPLIER MARKER (The start of the path) */}
+                    {active && active.dispatched && active.matchInfo && (
+                      <OverlayViewF 
+                        position={{ lat: active.matchInfo.lat, lng: active.matchInfo.lng }} 
+                        mapPaneName="overlayMouseTarget"
+                        getPixelPositionOffset={(width, height) => ({ x: -(width / 2), y: -(height / 2) })}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 5 }}>
+                          {/* A solid teal square to differentiate it from the circular emergency dots */}
+                          <div style={{
+                            width: 10, height: 10, background: "#3D8A78", 
+                            border: `2px solid ${C.bg}`, boxShadow: `0 0 10px #3D8A78`
+                          }} />
+                          <div style={{
+                            marginTop: 6, fontFamily: mono, fontSize: 8, color: "#3D8A78", 
+                            background: C.bg, padding: "2px 6px", border: `1px solid #3D8A78`, 
+                            whiteSpace: "nowrap", boxShadow: `0 4px 6px rgba(0,0,0,0.4)`
+                          }}>
+                            SUPPLIER: {active.matchInfo.name.toUpperCase()}
+                          </div>
+                        </div>
+                      </OverlayViewF>
+                    )}
+
+
+                    {/* 3. CUSTOM OVERLAY DOTS (Matches Radar Exactly) */}
+                    {feed.map(e => {
+                      const u = URGENCY[e.emergencyDetails?.urgency || e.urgency] || URGENCY.LOW;
+                      const isA = e.id === activeId;
+                      const dotColor = e.dispatched ? "#EAB308" : u.color;
+                      
+                      return (
+                        <OverlayViewF 
+                          key={e.id} 
+                          position={{ lat: e.coords.lat, lng: e.coords.lng }} 
+                          mapPaneName="overlayMouseTarget"
+                          getPixelPositionOffset={(width, height) => ({ x: -(width / 2), y: -(height / 2) })}
+                        >
+                          <div 
+                            onClick={() => setActiveId(e.id)} 
+                            style={{ 
+                              position: "absolute", 
+                              cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", zIndex: isA ? 10 : 1 
+                            }}
+                          >
+                            {/* The Ping Animation */}
+                            {isA && <span style={{ position: "absolute", inset: -5, borderRadius: "50%", border: `1px solid ${dotColor}`, opacity: 0.5, animation: "vr-ring 1.8s ease-out infinite" }} />}
+                            
+                            {/* The Core Dot */}
+                            <div style={{
+                              width: isA ? 12 : 8, height: isA ? 12 : 8, borderRadius: "50%",
+                              background: dotColor, opacity: isA ? 1 : 0.85,
+                              boxShadow: isA ? `0 0 14px ${dotColor}, 0 0 5px ${dotColor}` : "none",
+                              transition: "all 0.25s", border: `1px solid ${C.bg}`
+                            }} />
+                            
+                            {/* The Label */}
+                            {isA && (
+                              <div style={{
+                                position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
+                                fontFamily: mono, fontSize: 8, color: dotColor, letterSpacing: "0.12em",
+                                whiteSpace: "nowrap", background: C.bg, padding: "2px 6px",
+                                border: `1px solid ${dotColor}`, boxShadow: `0 4px 6px rgba(0,0,0,0.4)`
+                              }}>
+                                {(e.emergencyDetails?.heading || e.title).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        </OverlayViewF>
+                      );
+                    })}
+                  </GoogleMap>
+                ) : (
+                  <div style={{ display: "flex", height: "100%", alignItems: "center", justifyContent: "center", background: C.panel }}>
+                    <Loader2 size={24} color={C.dim} style={{ animation: "spin 1s linear infinite" }} />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Incident count underneath map/radar */}
+            <div style={{ display: "flex", gap: 18, marginTop: 4 }}>
               {Object.entries(URGENCY).map(([key, u]) => {
                 const count = feed.filter(f => f.urgency === key).length;
                 return (
@@ -619,6 +853,7 @@ export default function VitalRoute() {
             transform: active ? "translateY(100%)" : "none",
           }} />
         </div>
+
 
         {/* ══ RIGHT SIDEBAR — LIVE FEED ════════════════════════════════════════ */}
         <div style={{

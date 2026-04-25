@@ -7,45 +7,38 @@ const { getEtaBatch } = require('../services/mapsService');
 const { parseCrisisCommand } = require('../services/geminiService'); // Make sure this path is correct!
 
 router.post('/', async (req, res) => {
-
   try {
-
     // 2. EXTRACT 'text' FROM THE FRONTEND REQUEST
-
     const { hospitalLocation, requiresColdChain, text } = req.body;
-
     const db = admin.firestore();
 
-
-
     // 3. LET GEMINI ANALYZE THE EMERGENCY
-
     let aiAnalysis = null;
-
-    let needsColdChain = requiresColdChain; // Default to whatever the frontend toggle says
-
-
+    let needsColdChain = requiresColdChain; 
 
     if (text && text.trim() !== "") {
-
       console.log(`🧠 AI Analyzing Emergency: "${text}"`);
-
-      // Pass the text to Gemini
-
-      aiAnalysis = await parseCrisisCommand(text, "hosp_lucknow_01");
-
-     
-
-      // Override the manual UI toggle with Gemini's intelligence!
-
-      // If Gemini says it needs a cold chain (e.g. for blood), force it to true.
-
-      if (aiAnalysis.requiresColdChain === true) {
-
-          needsColdChain = true;
-
+      
+      try {
+        // We try to use the AI
+        aiAnalysis = await parseCrisisCommand(text, "hosp_lucknow_01");
+        
+        if (aiAnalysis && aiAnalysis.requiresColdChain === true) {
+            needsColdChain = true;
+        }
+      } catch (aiError) {
+        // 🛡️ THE SHIELD: If the key is expired, we catch the error here!
+        console.warn(`⚠️ AI Service Unavailable (${aiError.message}). Falling back to manual mode.`);
+        
+        // We provide a fake AI response so the rest of the code doesn't explode
+        const isCritical = text.toLowerCase().includes("accident") || text.toLowerCase().includes("asap");
+        aiAnalysis = {
+          heading: isCritical ? "Critical Emergency Response" : "Emergency Logistics Request",
+          urgency: isCritical ? "CRITICAL" : "HIGH",
+          requiresColdChain: requiresColdChain, // Trust the frontend switch
+          items: [{ name: "Requested Emergency Supplies", quantity: 1 }]
+        };
       }
-
     }
 
     // 4. Fetch all available suppliers
