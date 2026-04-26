@@ -23,32 +23,33 @@ const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-// 🌟 HACKATHON GOD MODE CORS: Bypasses the Vercel/Browser block
+// ── Middleware ────────────────────────────────────────────────────────────────
+
+// Fix 1: Explicitly list allowed headers, don't use wildcard
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: '*'
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
+  optionsSuccessStatus: 204
 }));
 
+// Fix 2: Respond to ALL OPTIONS preflight requests immediately
+app.options('*', cors());
+
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan('combined')); 
+app.use(morgan('combined'));
 
 const rateLimit = require("express-rate-limit");
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100
-});
-
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
 app.use(limiter);
 
 app.use((req, res, next) => {
-  // Allow health check
   if (req.path === '/health') return next();
 
-  const key = req.headers['x-api-key'];
+  // Fix 3: Never block OPTIONS — browser preflight won't carry x-api-key
+  if (req.method === 'OPTIONS') return next();
 
-  // If API_KEY is not set, skip protection (prevents crash)
+  const key = req.headers['x-api-key'];
   if (!process.env.API_KEY) return next();
 
   if (key !== process.env.API_KEY) {

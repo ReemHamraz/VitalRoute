@@ -464,29 +464,31 @@ export default function VitalRoute() {
   useEffect(() => { if (feedRef.current) feedRef.current.scrollTop = 0; }, [feed]);
 
   async function extract() {
-    if (!input.trim() || loading) return;
-    setLoading(true); setError(null);
+  if (!input.trim() || loading) return;
+  setLoading(true);
+  setError(null);
 
   try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+    // Use the env var — don't hardcode the Cloud Run URL
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-      const res = await fetch(`${API_BASE_URL}/api/match`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_API_KEY
-        },
-        body: JSON.stringify({
-          text: input.trim(),
-          hospitalLocation: { lat: 26.8638, lng: 80.9228 },
-          requiresColdChain: coldChain
-        }),
-      });
+    const res = await fetch(`${API_BASE_URL}/api/match`, {  // ← use the variable
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": import.meta.env.VITE_API_KEY
+      },
+      body: JSON.stringify({
+        text: input.trim(),
+        hospitalLocation: { lat: 26.8638, lng: 80.9228 },
+        requiresColdChain: coldChain
+      }),
+    });
 
-      if (!res.ok) throw new Error(`Server Error: ${res.status}. Check CORS in index.js`);
+    if (!res.ok) throw new Error(`Server Error: ${res.status}`);
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "Match failed.");
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || "Match failed.");
 
       const now  = new Date();
       const ts   = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
