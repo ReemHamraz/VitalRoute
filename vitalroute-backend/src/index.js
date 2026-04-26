@@ -37,7 +37,7 @@ const corsOptions = {
     'http://localhost:5175',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
-    'https://vital-route.vercel.app/' // 🌟 ADD THIS FOR CLOUD DEPLOYMENT!
+    'https://vital-route.vercel.app' // 🌟 ADD THIS FOR CLOUD DEPLOYMENT!
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -46,6 +46,31 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined')); 
+
+const rateLimit = require("express-rate-limit");
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100
+});
+
+app.use(limiter);
+
+app.use((req, res, next) => {
+  // Allow health check
+  if (req.path === '/health') return next();
+
+  const key = req.headers['x-api-key'];
+
+  // If API_KEY is not set, skip protection (prevents crash)
+  if (!process.env.API_KEY) return next();
+
+  if (key !== process.env.API_KEY) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  next();
+});
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',          authRoutes);
