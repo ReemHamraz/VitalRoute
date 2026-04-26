@@ -79,6 +79,7 @@ const SEED = [
     matchInfo: { name: "Central Medical Supply", lat: 26.8350, lng: 80.9150, id: "sup-04", hasRefrigeration: false }
   }
 ];
+
 const R = 148; // radar radius px
 const D = R * 2;
 
@@ -181,16 +182,13 @@ function Radar({ entries, activeId, onSelect }) {
   );
 }
 
-
 // ── INCIDENT DETAIL STRIP ─────────────────────────────────────────────────────
-
 
 function DetailStrip({ entry, onDispatch }) {
   const isDispatched = entry.dispatched;
   const urgencyKey = entry.emergencyDetails?.urgency || entry.urgency;
   const baseUrgency = URGENCY[urgencyKey] || URGENCY.LOW;
 
-  // OVERRIDE: Turn center console yellow if dispatched
   const u = isDispatched 
     ? { ...baseUrgency, color: "#EAB308", dim: "rgba(234,179,8,0.15)", bd: "rgba(234,179,8,0.4)" } 
     : baseUrgency;
@@ -201,10 +199,9 @@ function DetailStrip({ entry, onDispatch }) {
     <div style={{ 
       width: "100%", borderTop: `1px solid ${u.bd}`, background: u.dim, 
       display: "flex", animation: "vr-reveal 0.3s ease both",
-      overflow: "hidden" // THE FIX: Prevents the container from bleeding into the right panel
+      overflow: "hidden" 
     }}>
       
-      {/* 1. Dynamic Identity Block */}
       <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 25%", minWidth: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 5 }}>
           <Ping color={u.color} sz={4} />
@@ -217,7 +214,6 @@ function DetailStrip({ entry, onDispatch }) {
         </div>
       </div>
 
-      {/* 2. Dynamic Items Block */}
       <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 30%", minWidth: 100 }}>
         <div style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.16em", marginBottom: 7 }}>REQUESTED SUPPLIES</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -234,7 +230,6 @@ function DetailStrip({ entry, onDispatch }) {
         </div>
       </div>
 
-      {/* 3. Match Info & ETA */}
       {entry.matchInfo ? (
          <div style={{ padding: "12px", borderRight: `1px solid ${C.rule}`, flex: "1 1 20%", minWidth: 110, background: C.tealDim }}>
             <div style={{ fontFamily: mono, fontSize: 8, color: C.teal, letterSpacing: "0.16em", marginBottom: 7 }}>LIVE ETA (GOOGLE)</div>
@@ -255,13 +250,12 @@ function DetailStrip({ entry, onDispatch }) {
         </div>
       )}
       
-      {/* 4. Conditional Dispatch UI */}
       <div style={{ padding: "12px", display: "flex", alignItems: "center", justifyContent: "flex-end", flex: "1 1 25%", minWidth: 130 }}>
         {isDispatched ? (
           <div style={{ 
             fontFamily: mono, color: "#EAB308", textAlign: "right",
             display: "flex", flexDirection: "column", gap: 4,
-            wordBreak: "break-word", whiteSpace: "normal" // THE FIX: Forces long text to stack
+            wordBreak: "break-word", whiteSpace: "normal" 
           }}>
             <span style={{ fontSize: 11, fontWeight: "bold", letterSpacing: "0.1em", display: "flex", alignItems: "flex-start", justifyContent: "flex-end", gap: 5, flexWrap: "wrap" }}>
               <Navigation size={12} color={"#EAB308"} style={{ marginTop: 2, flexShrink: 0 }} /> 
@@ -293,19 +287,13 @@ function DetailStrip({ entry, onDispatch }) {
   );
 }
 
-
-
 // ── FEED CARD ─────────────────────────────────────────────────────────────────
 
 function FeedCard({ entry, isNew, isActive, onClick }) {
-  // Check if this specific entry has been dispatched
   const isDispatched = entry.dispatched;
-  
-  // Base urgency from your backend
   const urgencyKey = entry.emergencyDetails?.urgency || entry.urgency;
   const baseUrgency = URGENCY[urgencyKey] || URGENCY.LOW;
 
-  // OVERRIDE: If dispatched, turn the UI elements tactical Yellow
   const u = isDispatched 
     ? { ...baseUrgency, color: "#EAB308", dim: "rgba(234,179,8,0.1)", bd: "rgba(234,179,8,0.3)" } 
     : baseUrgency;
@@ -317,7 +305,7 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
       borderLeft: `3px solid ${isActive || isDispatched ? u.color : "transparent"}`,
       padding: "11px 14px 11px 12px",
       cursor: "pointer", transition: "background 0.18s",
-      opacity: isDispatched ? 0.7 : 1, // Fades slightly to show it is handled
+      opacity: isDispatched ? 0.7 : 1, 
       animation: isNew ? "vr-slide 0.4s cubic-bezier(0.22,1,0.36,1)" : "none",
     }}
       onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = C.faint; }}
@@ -325,7 +313,6 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {/* Change the badge text to EN ROUTE if dispatched */}
           {isDispatched ? (
              <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: "0.18em", padding: "2px 6px", background: u.dim, border: `1px solid ${u.bd}`, color: u.color }}>
                EN ROUTE
@@ -364,7 +351,6 @@ function FeedCard({ entry, isNew, isActive, onClick }) {
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 
 export default function VitalRoute() {
-  // 1. ALL STATE VARIABLES
   const [feed, setFeed]       = useState(SEED);
   const [input, setInput]     = useState("");
   const [coldChain, setColdChain] = useState(true);
@@ -376,16 +362,21 @@ export default function VitalRoute() {
   const [directionsResponse, setDirectionsResponse] = useState(null);
   const [viewMode, setViewMode] = useState("radar");
   const [dispatchedCount, setDispatchedCount] = useState(14);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY 
   });
 
-  // Helper variable for the currently selected incident
   const active = feed.find(f => f.id === activeId) || feed[0];
 
-  // THE FIX: Memorize Map Settings to prevent re-render bouncing
   const mapCenter = useMemo(() => ({ lat: 26.8638, lng: 80.9228 }), []);
   const mapContainerStyle = useMemo(() => ({ width: '100%', height: '100%' }), []);
   const mapOptions = useMemo(() => ({ 
@@ -394,22 +385,18 @@ export default function VitalRoute() {
     backgroundColor: C.bg 
   }), []);
 
-  // 2. ROUTING LOGIC: Reset the path whenever the active emergency changes
   useEffect(() => {
     setDirectionsResponse(null);
   }, [activeId]);
 
-  // 3. ROUTING LOGIC: The Native Google Maps Engine
   useEffect(() => {
-    // Only fire if the map is loaded, we have an active incident, and it has been dispatched
     if (!isLoaded || !active || !active.dispatched) return;
 
     const directionsService = new window.google.maps.DirectionsService();
 
-    // Safely parse the exact coordinates from the supplier (matchInfo)
     const origin = active.matchInfo?.lat
       ? { lat: Number(active.matchInfo.lat), lng: Number(active.matchInfo.lng) }
-      : { lat: 26.8638, lng: 80.9228 }; // Fallback to Lucknow Base
+      : { lat: 26.8638, lng: 80.9228 }; 
 
     const destination = { lat: Number(active.coords.lat), lng: Number(active.coords.lng) };
 
@@ -429,7 +416,6 @@ export default function VitalRoute() {
     );
   }, [isLoaded, active?.id, active?.dispatched, active?.matchInfo]);
 
-  // 4. SPEECH RECOGNITION LOGIC
   const startListening = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
@@ -462,38 +448,34 @@ export default function VitalRoute() {
  
   const feedRef = useRef(null);
 
-
   const handleDispatch = (idToDispatch) => {
-    // 1. Mark the item as dispatched (turns it yellow in the UI)
     setFeed(prevFeed => prevFeed.map(item => 
       item.id === idToDispatch ? { ...item, dispatched: true } : item
     ));
     
-    // 2. Increment the sidebar counter
     setDispatchedCount(prev => prev + 1);
 
-    // 3. Set a 10-minute timer to completely remove it from the radar/feed
-    // Note: 10 minutes = 600,000 ms. (Change to 5000 if you want to test it in 5 seconds!)
     setTimeout(() => {
       setFeed(prevFeed => prevFeed.filter(item => item.id !== idToDispatch));
-      
-      // If the user happens to still be looking at this card when it expires, clear the view
       setActiveId(prevId => prevId === idToDispatch ? null : prevId);
     }, 600000); 
   };
   
   useEffect(() => { if (feedRef.current) feedRef.current.scrollTop = 0; }, [feed]);
+
   async function extract() {
     if (!input.trim() || loading) return;
     setLoading(true); setError(null);
-    
-    try {
-      const res = await fetch("http://localhost:8080/api/match", {
+
+  try {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+      
+      const res = await fetch(`${API_BASE_URL}/api/match`, {
         method: "POST", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: input.trim(),
-          hospitalLocation: { lat: 26.8638, lng: 80.9228 }, // Lucknow Base
+          hospitalLocation: { lat: 26.8638, lng: 80.9228 }, 
           requiresColdChain: coldChain
         }),
       });
@@ -506,7 +488,6 @@ export default function VitalRoute() {
       const now  = new Date();
       const ts   = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       
-      // THE FIX: Directly mapping the AI's "emergencyDetails" object from your backend
       const entry = { 
         id: Date.now(), 
         ts, 
@@ -515,18 +496,19 @@ export default function VitalRoute() {
         loc: data.match.name,
         items: data.emergencyDetails?.items || [{ name: "Requested Assets", quantity: 1, unit: "batch" }],
         flags: [coldChain ? "Cold Chain" : "Standard", data.match.status || "Active"],
-        // THE FIX: Adding lat/lng so new emergencies appear on the live map
         coords: { 
           x: 32 + Math.random() * 36, 
           y: 28 + Math.random() * 40,
-          lat: 26.8638 + (Math.random() - 0.5) * 0.08, // Generates a random GPS point nearby
-          lng: 80.9228 + (Math.random() - 0.5) * 0.08  // Generates a random GPS point nearby
+          lat: 26.8638 + (Math.random() - 0.5) * 0.08, 
+          lng: 80.9228 + (Math.random() - 0.5) * 0.08  
         },
         etaText: data.etaText,
         matchInfo: data.match,
         emergencyDetails: data.emergencyDetails 
       };
+      
       setActiveId(entry.id);
+      setNewId(entry.id); 
       setFeed(prev => [entry, ...prev]);
       setInput("");
       
@@ -537,6 +519,7 @@ export default function VitalRoute() {
         setLoading(false); 
     }
   }
+
   const btnOn = input.trim() && !loading;
 
   return (
@@ -557,10 +540,8 @@ export default function VitalRoute() {
         .vr-ta::placeholder { color: rgba(237,232,210,0.2); font-family: 'Courier Prime', monospace; font-size: 12px; }
         .vr-ta:focus        { outline: none; }
         
-        /* THE FIX: Hide scrollbar for Chrome, Safari and Opera */
         .vr-ta::-webkit-scrollbar { display: none; }
         
-        /* THE FIX: Hide scrollbar for IE, Edge and Firefox */
         .vr-ta { -ms-overflow-style: none; scrollbar-width: none; }
 
         .vr-feed::-webkit-scrollbar       { width: 2px; }
@@ -577,12 +558,13 @@ export default function VitalRoute() {
 
       {/* ROOT — CSS GRID */}
       <div style={{
-        width: "100%", height: "100vh", minHeight: 560,
+        width: "100%", 
+        height: isMobile ? "auto" : "100vh", 
         display: "grid",
-        gridTemplateRows: "46px 1fr",
-        gridTemplateColumns: "190px 1fr 306px",
+        gridTemplateColumns: isMobile ? "1fr" : "190px 1fr 306px",
+        gridTemplateRows: isMobile ? "auto auto auto auto" : "46px 1fr",
         background: C.bg, color: C.text,
-        overflow: "hidden",
+        overflow: isMobile ? "auto" : "hidden",
       }}>
 
         {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
@@ -592,16 +574,19 @@ export default function VitalRoute() {
           borderBottom: `1px solid ${C.ruleHard}`,
           display: "flex", alignItems: "center",
           padding: "0 18px", gap: 0,
+          flexWrap: isMobile ? "wrap" : "nowrap",
+          minHeight: isMobile ? "auto" : "46px",
+          paddingTop: isMobile ? "8px" : "0",
+          paddingBottom: isMobile ? "8px" : "0",
           animation: "vr-in 0.4s ease both",
         }}>
-          {/* Brand */}
           <div style={{ display: "flex", alignItems: "center", gap: 9, paddingRight: 18, borderRight: `1px solid ${C.rule}` }}>
-            <Siren size={14} color={C.red} strokeWidth={1.8} />
-            <span style={{ fontFamily: bebas, fontSize: 22, color: C.text, letterSpacing: "0.12em" }}>VITALROUTE</span>
-            <span style={{ fontFamily: mono, fontSize: 9, color: C.dim, letterSpacing: "0.14em", marginLeft: 4 }}>CRISIS CMD v2.4</span>
+            <Siren size={14} color={C.red} strokeWidth={2.5} />
+            <div style={{ fontFamily: bebas, fontSize: 22, color: C.text, letterSpacing: "0.1em", marginTop: 2 }}>
+              VITALROUTE
+            </div>
           </div>
 
-          {/* Status nodes */}
           <div style={{ display: "flex", gap: 0, flex: 1, paddingLeft: 1 }}>
             {[["NETWORK","LIVE",C.teal],["FEEDS", feed.length.toString() ,C.mid],["UNITS ACTIVE","12",C.mid],["SIGNAL","98%",C.teal]].map(([l,v,vc]) => (
               <div key={l} style={{ display: "flex", alignItems: "center", gap: 6, padding: "0 16px", borderRight: `1px solid ${C.rule}` }}>
@@ -611,7 +596,6 @@ export default function VitalRoute() {
             ))}
           </div>
 
-          {/* Op status */}
           <div style={{ display: "flex", alignItems: "center", gap: 7, paddingLeft: 18, borderLeft: `1px solid ${C.rule}` }}>
             <Ping color={C.teal} sz={4} />
             <span style={{ fontFamily: mono, fontSize: 9, color: C.teal, letterSpacing: "0.12em" }}>ALL SYSTEMS NOMINAL</span>
@@ -619,19 +603,23 @@ export default function VitalRoute() {
         </div>
 
         {/* ══ LEFT PANEL — STATS ═══════════════════════════════════════════════ */}
-        <div style={{
-          gridColumn: "1", gridRow: "2",
-          background: C.panel,
-          borderRight: `1px solid ${C.ruleHard}`,
-          display: "flex", flexDirection: "column",
-          animation: "vr-in 0.5s ease 0.1s both",
+        <div style={{ 
+          gridColumn: isMobile ? "1 / -1" : "1", // THE FIX: Fills width on mobile safely
+          gridRow: isMobile ? "4" : "2", 
+          width: "100%", 
+          borderRight: isMobile ? "none" : `1px solid ${C.rule}`,
+          borderTop: isMobile ? `1px solid ${C.rule}` : "none",
+          display: "flex", 
+          flexDirection: isMobile ? "row" : "column", 
+          flexWrap: isMobile ? "wrap" : "nowrap",
+          minHeight: 0, 
+          overflowY: "auto"
         }}>
-          {/* Panel header */}
+        
           <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${C.rule}` }}>
             <span style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.18em" }}>OPERATIONAL STATUS</span>
           </div>
 
-          {/* Stat blocks */}
           {[
             { 
               label: "ACTIVE INCIDENTS",  
@@ -659,7 +647,6 @@ export default function VitalRoute() {
             </div>
           ))}
 
-          {/* Radio footer */}
           <div style={{ padding: "10px 14px", borderTop: `1px solid ${C.rule}`, marginTop: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <Radio size={10} color={C.dim} />
@@ -669,24 +656,22 @@ export default function VitalRoute() {
         </div>
 
         {/* ══ CENTER — RADAR + DETAIL STRIP ════════════════════════════════════ */}
-
         <div style={{
-          gridColumn: "2", gridRow: "2",
+          gridColumn: isMobile ? "1 / -1" : "2", // THE FIX: Forces column 1 on mobile
+          gridRow: "2", // Ensures it stays right beneath Top bar
           display: "flex", flexDirection: "column",
           alignItems: "center", position: "relative",
           overflow: "hidden",
+          minHeight: 0, 
+          height: isMobile ? "50vh" : "100%", // THE FIX: Strict mobile boundary
           animation: "vr-in 0.5s ease 0.15s both",
         }}>
-          {/* Topographic grid background */}
-          <div className="vr-scan-bg" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
 
-          {/* Atmospheric glow */}
+          <div className="vr-scan-bg" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
           <div style={{ position: "absolute", top: "30%", left: "50%", transform: "translate(-50%,-50%)", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(224,56,32,0.05) 0%, transparent 65%)", pointerEvents: "none" }} />
 
-          {/* Radar section — fills center vertically */}
           <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: "0 0 10px", width: "100%", paddingBottom: active ? 0 : 10, position: "relative" }}>
             
-          {/*  iOS-STYLE TOGGLE SWITCH */}
             <div 
               onClick={() => setViewMode(prev => prev === "radar" ? "satellite" : "radar")}
               style={{ 
@@ -712,37 +697,32 @@ export default function VitalRoute() {
               </div>
             </div>
 
-            {/* Section label */}
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ height: 1, width: 40, background: C.rule }} />
               <span style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.2em" }}>REGIONAL DISPATCH GRID</span>
               <div style={{ height: 1, width: 40, background: C.rule }} />
             </div>
 
-            {/* SEAMLESS CONDITIONAL RENDER */}
             {viewMode === "radar" ? (
               <Radar entries={feed} activeId={activeId} onSelect={setActiveId} />
             ) : (
-              /* FULL SCREEN MAP WRAPPER */
               <div style={{ flex: 1, width: "100%", height: "100%", minHeight: 300, borderRadius: 4, overflow: "hidden", border: `1px solid ${C.ruleHard}`, position: "relative" }}>
                 {isLoaded ? (
                   <GoogleMap
-                    mapContainerStyle={mapContainerStyle} // <--- Using memoized style
-                    center={mapCenter}                    // <--- Using memoized center
+                    mapContainerStyle={mapContainerStyle}
+                    center={mapCenter}                   
                     zoom={14}
                     mapTypeId="hybrid"
-                    options={mapOptions}                  // <--- Using memoized options
+                    options={mapOptions}                  
 
                   >
-                    
-                    {/* 2. RENDER THE BLUE (TEAL) PATH */}
                     {directionsResponse && active && active.dispatched && (
                       <DirectionsRenderer
                         options={{
                           directions: directionsResponse,
                           suppressMarkers: true, 
                           polylineOptions: {
-                            strokeColor: "#3D8A78", // Command Center Teal
+                            strokeColor: "#3D8A78", 
                             strokeWeight: 4,
                             strokeOpacity: 0.8,
                           },
@@ -750,7 +730,6 @@ export default function VitalRoute() {
                       />
                     )}
 
-                    {/* NEW: 2.5 RENDER THE SUPPLIER MARKER (The start of the path) */}
                     {active && active.dispatched && active.matchInfo && (
                       <OverlayViewF 
                         position={{ lat: active.matchInfo.lat, lng: active.matchInfo.lng }} 
@@ -758,7 +737,6 @@ export default function VitalRoute() {
                         getPixelPositionOffset={(width, height) => ({ x: -(width / 2), y: -(height / 2) })}
                       >
                         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", zIndex: 5 }}>
-                          {/* A solid teal square to differentiate it from the circular emergency dots */}
                           <div style={{
                             width: 10, height: 10, background: "#3D8A78", 
                             border: `2px solid ${C.bg}`, boxShadow: `0 0 10px #3D8A78`
@@ -774,8 +752,6 @@ export default function VitalRoute() {
                       </OverlayViewF>
                     )}
 
-
-                    {/* 3. CUSTOM OVERLAY DOTS (Matches Radar Exactly) */}
                     {feed.map(e => {
                       const u = URGENCY[e.emergencyDetails?.urgency || e.urgency] || URGENCY.LOW;
                       const isA = e.id === activeId;
@@ -795,18 +771,13 @@ export default function VitalRoute() {
                               cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", zIndex: isA ? 10 : 1 
                             }}
                           >
-                            {/* The Ping Animation */}
                             {isA && <span style={{ position: "absolute", inset: -5, borderRadius: "50%", border: `1px solid ${dotColor}`, opacity: 0.5, animation: "vr-ring 1.8s ease-out infinite" }} />}
-                            
-                            {/* The Core Dot */}
                             <div style={{
                               width: isA ? 12 : 8, height: isA ? 12 : 8, borderRadius: "50%",
                               background: dotColor, opacity: isA ? 1 : 0.85,
                               boxShadow: isA ? `0 0 14px ${dotColor}, 0 0 5px ${dotColor}` : "none",
                               transition: "all 0.25s", border: `1px solid ${C.bg}`
                             }} />
-                            
-                            {/* The Label */}
                             {isA && (
                               <div style={{
                                 position: "absolute", top: 16, left: "50%", transform: "translateX(-50%)",
@@ -830,7 +801,6 @@ export default function VitalRoute() {
               </div>
             )}
 
-            {/* Incident count underneath map/radar */}
             <div style={{ display: "flex", gap: 18, marginTop: 4 }}>
               {Object.entries(URGENCY).map(([key, u]) => {
                 const count = feed.filter(f => f.urgency === key).length;
@@ -844,27 +814,27 @@ export default function VitalRoute() {
             </div>
           </div>
 
-          {/* Update this single line to pass the function */}
           {active && <DetailStrip key={activeId} entry={active} onDispatch={handleDispatch} />}
 
-          {/* Command Bar — absolutely positioned at very bottom inside center */}
           <div style={{
             position: "absolute", bottom: 0, left: 0, right: 0,
             transform: active ? "translateY(100%)" : "none",
           }} />
         </div>
 
-
         {/* ══ RIGHT SIDEBAR — LIVE FEED ════════════════════════════════════════ */}
         <div style={{
-          gridColumn: "3", gridRow: "2",
+          gridColumn: isMobile ? "1 / -1" : "3", // THE FIX: Fills width on mobile safely
+          gridRow: isMobile ? "3" : "2", // Right below Center Panel on mobile
           background: C.panel,
-          borderLeft: `1px solid ${C.ruleHard}`,
+          borderLeft: isMobile ? "none" : `1px solid ${C.ruleHard}`,
+          borderTop: isMobile ? `1px solid ${C.ruleHard}` : "none",
           display: "flex", flexDirection: "column",
-          animation: "vr-in 0.5s ease 0.2s both",
-          overflow: "hidden" // ADDED to ensure proper scrolling
+          height: isMobile ? "65vh" : "100%", // THE FIX: Bounded height fixes the flex-overflow bug!
+          minHeight: 0, 
+          overflow: "hidden" 
         }}>
-          {/* Feed header */}
+
           <div style={{ padding: "10px 14px 9px", borderBottom: `1px solid ${C.ruleHard}`, flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
               <span style={{ fontFamily: bebas, fontSize: 16, color: C.text, letterSpacing: "0.1em" }}>LIVE LOGISTICS FEED</span>
@@ -876,22 +846,33 @@ export default function VitalRoute() {
             <span style={{ fontFamily: mono, fontSize: 9, color: C.dim, letterSpacing: "0.08em" }}>{feed.length} ACTIVE REQUESTS — CLICK TO FOCUS</span>
           </div>
 
-          {/* Scrollable feed */}
-          <div ref={feedRef} className="vr-feed" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-            {feed.map(e => (
-              <FeedCard key={e.id} entry={e} isNew={e.id === newId} isActive={e.id === activeId} onClick={() => setActiveId(e.id)} />
+          <div 
+            className="vr-feed" 
+            ref={feedRef} 
+            style={{ 
+              flex: 1, 
+              overflowY: "auto", 
+              padding: "10px", 
+              display: "flex", flexDirection: "column", gap: 10 
+            }}
+          >
+            {feed.map(item => (
+              <FeedCard
+                key={item.id}
+                entry={item}
+                isNew={item.id === newId}
+                isActive={item.id === activeId}
+                onClick={() => setActiveId(item.id)}
+              />
             ))}
           </div>
 
-          {/* Command input — pinned to bottom of sidebar */}
           <div style={{ borderTop: `1px solid ${C.ruleHard}`, background: C.panel, flexShrink: 0 }}>
-            {/* Label */}
             <div style={{ padding: "9px 14px 7px", borderBottom: `1px solid ${C.rule}`, display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 6, height: 6, background: btnOn ? C.red : C.dim, display: "inline-block" }} />
               <span style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.18em" }}>CRISIS COMMAND INPUT</span>
             </div>
 
-            {/* Textarea + Microphone UI */}
             <div style={{ padding: "10px 12px 8px", position: "relative" }}>
               <textarea
                 className="vr-ta"
@@ -905,7 +886,7 @@ export default function VitalRoute() {
                   background: "rgba(237,232,210,0.04)",
                   border: `1px solid ${btnOn ? C.redBd : C.rule}`,
                   color: C.text, fontFamily: mono, fontSize: 11.5, lineHeight: 1.6,
-                  padding: "8px 30px 8px 10px", // Added right padding for mic
+                  padding: "8px 30px 8px 10px", 
                   transition: "border-color 0.2s",
                 }}
                 onFocus={e => e.target.style.borderColor = C.redBd}
@@ -925,14 +906,13 @@ export default function VitalRoute() {
                   color: isListening ? C.red : C.dim,
                   cursor: "pointer",
                   transition: "all 0.2s",
-                  animation: isListening ? "vr-ping 1.5s infinite" : "none", // Uses your existing ping animation
+                  animation: isListening ? "vr-ping 1.5s infinite" : "none", 
                 }}
               >
                 <Mic size={16} />
               </button>
             </div>
             
-            {/* Cold Chain Toggle added to Claude's Layout */}
             <div style={{ padding: "0 12px 10px", display: "flex", alignItems: "center" }}>
               <button
                 onClick={() => setColdChain(!coldChain)}
@@ -950,7 +930,6 @@ export default function VitalRoute() {
               </button>
             </div>
 
-            {/* Extract button */}
             <div style={{ padding: "0 12px 10px" }}>
               <button
                 onClick={extract}
@@ -975,7 +954,6 @@ export default function VitalRoute() {
               </button>
             </div>
 
-            {/* Error */}
             {error && (
               <div style={{ margin: "0 12px 10px", padding: "6px 10px", background: C.redDim, border: `1px solid ${C.redBd}`, display: "flex", alignItems: "center", gap: 7 }}>
                 <AlertTriangle size={10} color={C.red} />
@@ -984,7 +962,6 @@ export default function VitalRoute() {
               </div>
             )}
 
-            {/* Hint */}
             <div style={{ padding: "0 12px 10px", display: "flex", alignItems: "flex-start", gap: 6 }}>
               <Info size={9} color={C.dim} style={{ marginTop: 1, flexShrink: 0 }} />
               <span style={{ fontFamily: mono, fontSize: 8, color: C.dim, letterSpacing: "0.06em", lineHeight: 1.5 }}>
