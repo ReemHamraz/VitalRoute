@@ -468,14 +468,17 @@ export default function VitalRoute() {
     setLoading(true); setError(null);
 
   try {
-      const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
-      
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+
       const res = await fetch(`${API_BASE_URL}/api/match`, {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": import.meta.env.VITE_API_KEY
+        },
         body: JSON.stringify({
           text: input.trim(),
-          hospitalLocation: { lat: 26.8638, lng: 80.9228 }, 
+          hospitalLocation: { lat: 26.8638, lng: 80.9228 },
           requiresColdChain: coldChain
         }),
       });
