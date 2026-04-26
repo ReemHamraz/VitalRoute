@@ -22,29 +22,14 @@ const { startPolling } = require('./services/alertService');
 const app = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-// TWEAK: Allow both Vite (5173) and Create React App/Next.js (3000) defaults
-const allowedOrigins = [
-  'http://localhost:5173', 
-  'http://localhost:3000', 
-  process.env.ALLOWED_ORIGIN
-].filter(Boolean);
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    // Allow localhost
-    // Allow ANY Vercel deployment URL
-    if (!origin || origin.startsWith('http://localhost') || origin.endsWith('.vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+// 🌟 HACKATHON GOD MODE CORS: Bypasses the Vercel/Browser block
+app.use(cors({
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'] // <-- Added x-api-key here!
-};
+  allowedHeaders: '*'
+}));
 
-app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('combined')); 
 
