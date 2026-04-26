@@ -1,155 +1,263 @@
-# VitalRoute
+# 🚨 VitalRoute
+### *Routing the difference between life and death.*
+ 
+> **In a crisis, every second of manual logistics is a second stolen from survival.**
 
-A real-time medical supply chain platform built for the Google Solutions Challenge 2026.
-
-The problem it solves is specific: a hospital in Lucknow runs out of O-negative blood at 2am. Somewhere across the city, three other hospitals have it. Nobody knows. The patient waits.
-
-VitalRoute connects 50+ registered hospitals and suppliers on a live map, matches urgent supply requests to the nearest available source, and calculates the fastest route accounting for traffic. A nurse can describe the emergency in plain language instead of filling out a form — Gemini 2.5 Flash handles the rest.
+[![Deployed on Vercel](https://img.shields.io/badge/Frontend-Vercel-black?logo=vercel)](https://vercel.com)
+[![Backend on Cloud Run](https://img.shields.io/badge/Backend-Google%20Cloud%20Run-4285F4?logo=googlecloud)](https://cloud.google.com/run)
+[![Powered by Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blue?logo=google)](https://deepmind.google/technologies/gemini/)
+[![Firebase](https://img.shields.io/badge/Database-Firestore-orange?logo=firebase)](https://firebase.google.com)
 
 ---
 
-## Stack
+##  UN Sustainable Development Goals
 
-| Category | Technology |
+VitalRoute directly targets:
+- **Goal 3** — Good Health & Well-being
+- **Goal 9** — Industry, Innovation, and Infrastructure
+
+---
+
+##  The Problem
+
+When a mass casualty event occurs, hospitals scramble to locate and request medical supplies through fragmented phone calls, jammed radio lines, and outdated spreadsheets. The result:
+
+- Multiple hospitals call the same blood bank simultaneously
+- Un-refrigerated trucks are dispatched to pick up temperature-sensitive organs
+- Manual routing wastes golden minutes in the critical window between life and death
+
+**VitalRoute eliminates this chaos.**
+
+---
+
+##  The Solution
+
+VitalRoute is a **voice-to-dispatch command center** that translates unstructured human speech into structured, conflict-free logistics operations — in milliseconds.
+
+A dispatcher speaks the emergency. VitalRoute handles everything else:
+- AI parses the urgency and extracts exact medical needs
+- Cold-chain requirements are detected and enforced automatically
+- The fastest available, equipped supplier is identified using live traffic data
+- The route is locked atomically to prevent double-booking
+
+---
+
+##  Architecture
+
+### End-to-End Flow
+
+```
+[React UI]
+    │
+    ▼ Natural Language Text / Voice
+[Cloud Run — Express.js Backend]
+    │
+    ├──▶ [Gemini 2.5 Flash API]
+    │         └── Returns: { urgency, items, requiresColdChain }
+    │
+    ├──▶ [Firestore Database]
+    │         └── Filtered by cold-chain, availability, verification status
+    │
+    ├──▶ [Google Maps Distance Matrix API]
+    │         └── Live ETAs across all eligible suppliers
+    │
+    └──▶ [Firestore Transaction — Atomic Lock]
+              └── Supplier status: "active" → "dispatched"
+    │
+    ▼
+[React UI — Live Route Drawn on Map]
+```
+
+---
+
+##  Core Features
+
+###  A. AI-Powered NLP Triage
+Dispatchers speak or type raw, unstructured emergencies instead of navigating dropdown menus. The backend routes the text to **Gemini 2.5 Flash** using few-shot prompting, which returns a strictly typed JSON payload:
+
+```json
+{
+  "urgency": "CRITICAL",
+  "items": [{ "name": "O-negative blood", "qty": 10 }],
+  "requiresColdChain": true
+}
+```
+
+###  B. Autonomous Cold-Chain Intelligence
+If the AI extracts a temperature-sensitive item (plasma, organs, vaccines), it automatically flips `requiresColdChain: true`. The backend instantly filters out any supplier without a refrigerated fleet — preventing medical assets from spoiling in transit.
+
+###  C. Zero-Input Geolocation Binding
+The authenticated user's session token binds their pre-verified hospital coordinates to every request. No manual address entry. No location spoofing. Zero input, zero error.
+
+###  D. Hybrid Geospatial Routing Engine
+The backend batches all eligible supplier coordinates and sends them to the **Google Maps Distance Matrix API** with `departure_time=now`. It selects the minimum real-time ETA and returns the winning route to the frontend.
+
+###  E. Atomic Concurrency Control
+Before finalizing any dispatch, the backend executes a **Firestore Transaction**. If the supplier is still `"active"`, it is atomically locked to `"dispatched"`. If another hospital claimed the same supplier a millisecond earlier, the transaction fails gracefully and instantly reroutes to the next fastest option — mathematically preventing double-booking.
+
+###  F. The 503 Failsafe Shield
+If Gemini experiences a global outage, the backend's `catch` block intercepts the crash and falls back to a local **Regex/Keyword matching engine**. Emergency dispatch never goes offline.
+
+---
+
+##  Tech Stack
+
+| Layer | Technology |
 |---|---|
-| **Backend** | Node.js 20, Express 4 |
-| **Database** | Firebase Firestore |
-| **Auth** | Firebase Authentication + JWT |
-| **AI** | Gemini 2.5 Flash |
-| **Maps** | Google Maps Directions API + Distance Matrix API |
-| **Notifications** | Firebase Cloud Messaging |
-| **Frontend** | React 18, Vite, Tailwind CSS |
-| **Deployment** | Vercel (Frontend) & Render/Railway (Backend) |
+| **Frontend** | React.js (Vite), Tailwind CSS, @react-google-maps/api |
+| **Backend** | Node.js, Express.js |
+| **Database** | Firebase Admin SDK (Firestore) |
+| **AI** | Gemini 2.5 Flash API |
+| **Mapping** | Google Maps Distance Matrix API, Directions API |
+| **Security** | express-rate-limit, Custom API Header Keys, CORS |
+| **Frontend Deploy** | Vercel |
+| **Backend Deploy** | Google Cloud Run |
 
 ---
 
-## Getting started
+##  Getting Started
+
+### Prerequisites
+
+- Node.js v18+
+- Google Cloud SDK installed
+- Firebase project created
+- API keys for: Google Maps, Gemini AI, Firebase
+
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/ReemHamraz/VitalRoute.git
-cd VitalRoute/vitalroute-backend
+git clone https://github.com/your-username/vitalroute.git
+cd vitalroute
+```
 
+### 2. Backend Setup
+
+```bash
+cd vitalroute-backend
 npm install
-cp .env.example .env
-# fill in your credentials
-
-npm run dev
-# GET /health → { "status": "ok" }
 ```
 
-### Seed the database
-
-```bash
-node seed.js
-```
-
-Creates 50 hospitals across Lucknow with randomised inventory levels, 10 suppliers, and 3 demo requests. Without this the map is empty.
-
-### Environment variables
-
-Rename `.env.example` to `.env` and fill in:
+Create a `.env` file:
 
 ```env
 PORT=8080
 NODE_ENV=development
 ALLOWED_ORIGIN=http://localhost:5173
+API_KEY=your_secret_key
 
-FIREBASE_PROJECT_ID=
-FIREBASE_PRIVATE_KEY=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_WEB_API_KEY=
+FIREBASE_WEB_API_KEY=your_firebase_web_api_key
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+GEMINI_API_KEY=your_gemini_api_key
+JWT_SECRET=your_jwt_secret
+```
 
-GOOGLE_MAPS_API_KEY=
-GEMINI_API_KEY=
-JWT_SECRET=
-FCM_SERVER_KEY=
+```bash
+node index.js
+```
+
+### 3. Frontend Setup
+
+```bash
+cd vitalroute-frontend
+npm install
+```
+
+Create a `.env` file:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+VITE_API_KEY=your_secret_key
+
+VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+VITE_FIREBASE_API_KEY=your_firebase_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+```
+
+```bash
+npm run dev
 ```
 
 ---
 
 ## Deployment
 
-### Frontend → Vercel
-Push your code to GitHub. Connect the repository on [Vercel](https://vercel.com), set the **root directory** to `vitalroute-frontend`, and add `VITE_API_URL` (pointing to your live backend) in the Vercel dashboard under Settings → Environment Variables. Vercel detects Vite automatically and handles the build.
+### Backend — Google Cloud Run
 
-### Backend → Render or Railway
-Connect your GitHub repository to a cloud provider like [Render](https://render.com) or [Railway](https://railway.app). Set the **root directory** to `vitalroute-backend` and the start command to `npm start`. Copy all variables from your local `.env` and paste them into the platform's Environment Variables dashboard.
-
----
-
-## How it works
-
-```text
-Nurse types: "Highway accident — need 10 units O-negative and 2 ventilators NOW"
-                                        │
-                                        ▼
-                            ┌─────────────────────┐
-                            │   Gemini 2.5 Flash   │
-                            │   Intent Extraction  │
-                            └─────────────────────┘
-                                        │
-                                        ▼
-                        {
-                          urgency: "CRITICAL",
-                          items: [
-                            { name: "O-negative blood", qty: 10 },
-                            { name: "ventilator",       qty: 2  }
-                          ],
-                          flags: ["mass_casualty"]
-                        }
-                                        │
-                                        ▼
-                            ┌─────────────────────┐
-                            │   Matching Engine    │
-                            │  scans 50 hospitals  │
-                            │   + 15 suppliers     │
-                            └─────────────────────┘
-                                        │
-                          ┌─────────────────────────┐
-                          │  Google Distance Matrix  │
-                          │   API  (single batch)    │
-                          └─────────────────────────┘
-                                        │
-                                        ▼
-                     ┌──────────────────────────────────────┐
-                     │  Top 3 matches ranked by:            │
-                     │  (0.6 × proximity) +                 │
-                     │  (0.4 × stock availability ratio)    │
-                     └──────────────────────────────────────┘
-                                        │
-                    ┌───────────────────┴────────────────────┐
-                    ▼                                        ▼
-          Match found within 50km                  No match found
-          → notify hospital + supplier             → escalation alert
-          → dispatch with live route                 to coordinator
+```bash
+gcloud run deploy vitalroute \
+  --source . \
+  --region asia-south2 \
+  --platform managed \
+  --allow-unauthenticated \
+  --set-env-vars "API_KEY=...,GEMINI_API_KEY=...,GOOGLE_MAPS_API_KEY=...,FIREBASE_WEB_API_KEY=..."
 ```
 
-## How the matching works
+### Frontend — Vercel
 
-When a request comes in, the engine fetches all hospitals and suppliers, filters by available stock, and calls the Distance Matrix API in a single batch to get ETAs. Each source gets a score:
+Set the following in **Vercel → Project → Settings → Environment Variables**:
 
-```text
-score = (0.6 × proximity) + (0.4 × stock availability ratio)
-```
+| Key | Value |
+|---|---|
+| `VITE_API_BASE_URL` | Your Cloud Run service URL |
+| `VITE_API_KEY` | Same value as backend `API_KEY` |
+| `VITE_GOOGLE_MAPS_API_KEY` | Your Maps API key |
+| `VITE_FIREBASE_*` | Your Firebase config values |
 
-Top 3 results per item are returned. If nothing is found within 50km, an escalation alert fires to the coordinator.
-
----
-
-## Known limitations
-
-- Inventory status updates run on a 30-minute polling interval, not in real-time. A Firestore `onWrite` trigger would fix this but wasn't in scope.
-- The Distance Matrix API caps at 25 origins per request. The first 25 eligible sources are used.
-- The item name normalizer that maps Gemini output to Firestore keys covers common cases but not every phrasing variation.
+Then push to your connected Git branch — Vercel deploys automatically.
 
 ---
 
-## Built by
+##  UI Highlights
 
-- Reem Hamraz
-- Mohammad Maaz Siddiqui
-- Haider Maseeh
+- **Dual-Mode Map** — Toggle between a custom SVG tactical radar (rotating conic-gradient animations) and a live Google Satellite hybrid map
+- **Live Logistics Feed** — Real-time incident queue with urgency color coding (CRITICAL → RED, HIGH → ORANGE, etc.)
+- **Crisis Command Input** — Natural language text box with mic support, cold-chain toggle, and one-click Extract + Dispatch
+- **Fully Responsive** — Fluid mobile layout stacks Map → Feed → Command Input vertically for field operatives
 
-**Theme:** Smart Supply Chains — Open Innovation: Resilient Logistics and Dynamic Supply Chain Optimization.
+---
 
-We picked healthcare because it's the highest-stakes version of the problem. Rerouting a package is a logistics problem. Rerouting a life is what actually matters.
+##  Technical Challenges Overcome
+
+**1. Map Jitter on Keypress**
+Typing in the React input caused the Google Map to re-render and flash. Fixed with `useMemo` hooks caching `mapContainerStyle`, `mapCenter`, and `mapOptions` to break the re-render chain.
+
+**2. Mobile Viewport Collapse**
+Google Maps requires strict pixel heights, causing it to disappear in Flexbox mobile layouts. Solved with a hybrid CSS Grid approach using a `window` resize listener (`isMobile`) that assigns rigid `50vh` blocks.
+
+**3. CORS on Deployment**
+Deploying Vite to Vercel and Express to Cloud Run caused CORS to block all requests. Fixed by explicitly listing allowed headers (`Content-Type`, `x-api-key`) and bypassing the API key middleware for `OPTIONS` preflight requests.
+
+**4. Atomic Double-Booking**
+Multiple hospitals requesting the same supplier simultaneously caused race conditions. Solved with Firestore Transactions that execute a read-modify-write in a single indivisible operation.
+
+---
+
+##  Future Roadmap
+
+- **Drone Delivery Integration** — Same AI/Geo architecture extended to route automated medical drones
+- **FEMA / Disaster Relief API** — Plug into national emergency management feeds
+- **Organ Transplant Networks** — Ultra-strict cold-chain and time-window enforcement for organ logistics
+- **Predictive Stockpiling** — ML model to forecast supply shortages before crises occur
+
+---
+
+##  Team
+
+Built for the **Google Solution Challenge 2026** by Reem Hamraz, Mohammad Maaz Siddiqui and Haider Maseeh.
+
+---
+
+##  License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+  <strong>VitalRoute: Routing the difference between life and death.</strong>
+</div>
