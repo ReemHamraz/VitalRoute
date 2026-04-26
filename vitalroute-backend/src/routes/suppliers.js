@@ -4,8 +4,6 @@ const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
-// Apply authentication middleware to all supplier routes
-router.use(authMiddleware);
 
 // ── 🌟 DEMO RESET ROUTE (Must be above /:id) ─────────────────────────────────
 // POST /api/suppliers/reset-demo
@@ -30,6 +28,9 @@ router.post('/reset-demo', async (req, res, next) => {
         next(err); 
     }
 });
+
+// Apply authentication middleware to all supplier routes
+router.use(authMiddleware);
 
 // ── 📦 STANDARD ROUTES ────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
