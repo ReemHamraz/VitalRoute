@@ -37,7 +37,7 @@ const corsOptions = {
     'http://localhost:5175',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
-    process.env.FRONTEND_URL // 🌟 ADD THIS FOR CLOUD DEPLOYMENT!
+    'https://vital-route.vercel.app/' // 🌟 ADD THIS FOR CLOUD DEPLOYMENT!
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
