@@ -3,8 +3,8 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const { getEtaBatch } = require('../services/mapsService');
 
-// 1. IMPORT YOUR AI SERVICE HERE
-const { parseCrisisCommand } = require('../services/geminiService'); // Make sure this path is correct!
+// 1. IMPORT AI SERVICE HERE
+const { parseCrisisCommand } = require('../services/geminiService'); 
 
 router.post('/', async (req, res) => {
   try {
@@ -49,7 +49,7 @@ router.post('/', async (req, res) => {
       availableSuppliers.push({ id: doc.id, ...doc.data() });
     });
 
-    // 5. FEATURE 2: COLD CHAIN FILTERING (Now powered by AI!)
+    // 5. FEATURE 2: COLD CHAIN FILTERING ( powered by AI!)
     if (needsColdChain) {
       availableSuppliers = availableSuppliers.filter(s => s.hasRefrigeration === true);
     }
@@ -65,9 +65,9 @@ router.post('/', async (req, res) => {
       availableSuppliers
     );
 
-    // ... YOUR EXISTING SORTING AND FIRESTORE LOCKING LOGIC STAYS EXACTLY THE SAME BELOW THIS LINE ...
+    
     // 7. THE STEP 3 SORTING LOGIC!
-    // Sort the array mathematically from fastest (lowest seconds) to slowest
+    // Sorting the array mathematically from fastest (lowest seconds) to slowest
     rankedSuppliers.sort((a, b) => a.duration - b.duration);
 
    // 8. Grab the absolute fastest supplier (index 0)
@@ -92,17 +92,16 @@ router.post('/', async (req, res) => {
           throw new Error("Race Condition caught: Supplier was just booked.");
         }
 
-        // TODO: If you are tracking specific item quantities, you would subtract them here
-        // e.g., if (currentData.oxygenTanks < requestedTanks) throw Error("Not enough stock")
+        
 
-        // UPDATE: Lock the supplier (or subtract the inventory)
+        
         transaction.update(supplierRef, {
           status: 'dispatched', // Changing status prevents others from matching with them
           lastDispatchedAt: admin.firestore.FieldValue.serverTimestamp()
         });
       });
 
-      // If we reach this line, the transaction was 100% successful and locked.
+      // the transaction was 100% successful and locked.
       console.log(`🔒 Successfully locked asset: ${fastestSupplier.name}`);
 
       // 10. Return the absolute winner to the React frontend
@@ -110,13 +109,13 @@ router.post('/', async (req, res) => {
         success: true,
         match: fastestSupplier,
         etaText: `${Math.round(fastestSupplier.duration / 60)} mins in current traffic`,
-        emergencyDetails: aiAnalysis // <--- ADD THIS LINE!
+        emergencyDetails: aiAnalysis 
       });
 
     } catch (transactionError) {
       console.error("Transaction aborted! Saved from double-booking:", transactionError);
       
-      // Tell the frontend that the supplier was grabbed, and they need to re-run matching
+      
       return res.status(409).json({ 
         success: false, 
         error: "Top supplier was booked by another emergency during calculation. Re-calculating required." 
