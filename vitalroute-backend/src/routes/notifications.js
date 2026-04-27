@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, FieldValue } = require('../config/firebase'); // Fix: Use require and destructure FieldValue
+const { db, FieldValue } = require('../config/firebase'); 
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -14,12 +14,12 @@ router.post('/send', async (req, res, next) => {
             type: 'manual_notification',
             message: `${title}: ${body}`,
             isRead: false,
-            createdAt: FieldValue.serverTimestamp() // Fix: Uses Firestore server time
+            createdAt: FieldValue.serverTimestamp() 
         });
 
         res.json({ success: true });
     } catch(err) { 
-        next(err); // Fix: Forwards to the global error handler
+        next(err); 
     }
 });
 
