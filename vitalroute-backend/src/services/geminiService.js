@@ -1,6 +1,6 @@
 const { db } = require('../config/firebase');
 
-// No axios needed — Gemini REST works with native fetch (Node 18+)
+
 const parseCrisisCommand = async (rawText, hospitalId) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
