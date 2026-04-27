@@ -21,11 +21,10 @@ const { startPolling } = require('./services/alertService');
 
 const app = express();
 
-// ── Middleware ────────────────────────────────────────────────────────────────
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
-// Fix 1: Explicitly list allowed headers, don't use wildcard
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -33,7 +32,7 @@ app.use(cors({
   optionsSuccessStatus: 204
 }));
 
-// Fix 2: Respond to ALL OPTIONS preflight requests immediately
+
 app.options('*', cors());
 
 app.use(express.json({ limit: '10mb' }));
@@ -46,7 +45,7 @@ app.use(limiter);
 app.use((req, res, next) => {
   if (req.path === '/health') return next();
 
-  // Fix 3: Never block OPTIONS — browser preflight won't carry x-api-key
+  
   if (req.method === 'OPTIONS') return next();
 
   const key = req.headers['x-api-key'];
