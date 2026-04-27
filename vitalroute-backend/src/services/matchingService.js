@@ -3,7 +3,7 @@ const { getEtaBatch } = require('./mapsService');
 
 // ── Inventory key normalizer ──────────────────────────────────────────────────
 // Gemini returns natural language names. Firestore uses snake_case keys.
-// This maps Gemini output → your Firestore inventory schema.
+// This maps Gemini output → our Firestore inventory schema.
 const normalizeItemKey = (name = '') => {
   const n = name.toLowerCase().trim();
   if (n.includes('o-negative') || n.includes('o negative'))  return 'blood_O_negative';
@@ -15,7 +15,7 @@ const normalizeItemKey = (name = '') => {
   if (n.includes('ventilator'))                              return 'ventilators';
   if (n.includes('morphine'))                                return 'morphine_vials';
   if (n.includes('epinephrine') || n.includes('epi'))        return 'epinephrine';
-  // Default: snake_case the name as-is
+  
   return n.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_');
 };
 
