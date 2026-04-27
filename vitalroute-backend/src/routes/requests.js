@@ -1,5 +1,5 @@
 const express = require('express');
-const { db, FieldValue } = require('../config/firebase'); // Added FieldValue
+const { db, FieldValue } = require('../config/firebase'); 
 const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
@@ -25,7 +25,7 @@ router.post('/', async (req, res, next) => {
             matches: [],
             selectedMatch: null,
             assignedRoute: null,
-            createdAt: FieldValue.serverTimestamp(), // Fixed timestamp
+            createdAt: FieldValue.serverTimestamp(), 
             updatedAt: FieldValue.serverTimestamp()
         };
         const docRef = await db.collection('supply_requests').add(reqData);
