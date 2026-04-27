@@ -9,7 +9,7 @@ const authMiddleware = (req, res, next) => {
   const token = authHeader.split(' ')[1];
 
   try {
-    // Added the same fallback used in your auth.js route
+    // Added the same fallback used in auth.js route
     const secret = process.env.JWT_SECRET || 'secret';
     const decoded = jwt.verify(token, secret);
     
