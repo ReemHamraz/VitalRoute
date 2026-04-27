@@ -1,4 +1,3 @@
-// src/services/mapsService.js
 
 // Math formula to calculate real-world physical distance
 function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
@@ -10,13 +9,12 @@ function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
   return R * c; 
 }
 
-// Notice the arguments! They now perfectly match what matching.js sends.
+
 async function getEtaBatch(hospitalLat, hospitalLng, suppliers) {
   try {
-    // 1. Ensure we are working with an array of Supplier Objects
     const suppliersArray = Array.isArray(suppliers) ? suppliers : [suppliers];
 
-    // 2. Map over the suppliers, do the math, and attach the duration
+    
     return suppliersArray.map(supplier => {
       // Safety check
       if (!supplier || !supplier.lat || !supplier.lng) {
@@ -32,7 +30,7 @@ async function getEtaBatch(hospitalLat, hospitalLng, suppliers) {
       // We return the ENTIRE supplier object (so it keeps its .id), plus the new duration property!
       return {
         ...supplier,
-        duration: estimatedMinutes * 60 // matching.js sorts by duration in seconds (Line 38)
+        duration: estimatedMinutes * 60 
       };
     });
 
