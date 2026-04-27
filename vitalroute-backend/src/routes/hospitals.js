@@ -94,16 +94,15 @@ router.get('/:id/alerts', async (req, res, next) => {
 
         const snapshot = await db.collection('alerts')
             .where('hospitalId', '==', req.params.id)
-            .orderBy('createdAt', 'desc') // FIX: Newest alerts first
-            .limit(50)                    // FIX: Prevent massive payloads
+            .orderBy('createdAt', 'desc') 
+            .limit(50)                    
             .get();
             
         const alerts = [];
         snapshot.forEach(doc => alerts.push({ id: doc.id, ...doc.data() }));
         res.json(alerts);
     } catch(err) { 
-        // NOTE: If you get a "Requires Index" error in the console here,
-        // Firebase will provide a direct link in the error message. Click it to build the index!
+
         next(err); 
     }
 });
