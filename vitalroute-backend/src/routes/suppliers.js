@@ -5,8 +5,8 @@ const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
 
-// ── 🌟 DEMO RESET ROUTE (Must be above /:id) ─────────────────────────────────
-// POST /api/suppliers/reset-demo
+// ── 🌟 DEMO RESET ROUTE  ─────────────────────────────────
+
 router.post('/reset-demo', async (req, res, next) => {
     try {
         const suppliersRef = db.collection('suppliers');
@@ -15,7 +15,7 @@ router.post('/reset-demo', async (req, res, next) => {
         const batch = db.batch();
 
         snapshot.forEach((doc) => {
-            // Modify these fields based on exactly how your database tracks availability
+            
             batch.update(doc.ref, { 
                 isActive: true, 
                 isAvailable: true 
