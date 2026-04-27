@@ -4,7 +4,7 @@ const checkThresholds = async () => {
   try {
     const hospitalsSnapshot = await db.collection('hospitals').get();
 
-    // FIX 1: Fetch ALL active critical requests in ONE query, not N queries inside the loop
+    // Fetching ALL active critical requests in ONE query, not N queries inside the loop
     const criticalRequestsSnap = await db.collection('supply_requests')
       .where('urgency', '==', 'CRITICAL')
       .where('status', 'in', ['pending', 'matched'])
@@ -44,7 +44,7 @@ const checkThresholds = async () => {
           .where('hospitalId', '==', doc.id)
           .where('type', '==', alertType)
           .where('isRead', '==', false)
-          .limit(1)  // FIX 2: limit(1) is faster than .get() on the full result
+          .limit(1)  
           .get();
 
         if (existingAlerts.empty) {
@@ -82,8 +82,7 @@ const checkThresholds = async () => {
 };
 
 const startPolling = () => {
-  // FIX: Run IMMEDIATELY on startup, then every 30 minutes
-  // Without this, first check doesn't happen until 30 min after deploy
+  
   checkThresholds();
   setInterval(checkThresholds, 30 * 60 * 1000);
 };
