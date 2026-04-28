@@ -469,7 +469,7 @@ export default function VitalRoute() {
   setError(null);
 
   try {
-    // Use the env var — don't hardcode the Cloud Run URL
+    
     const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
     const res = await fetch(`${API_BASE_URL}/api/match`, {  // ← use the variable
@@ -609,7 +609,7 @@ export default function VitalRoute() {
 
         {/* ══ LEFT PANEL — STATS ═══════════════════════════════════════════════ */}
         <div style={{ 
-          gridColumn: isMobile ? "1 / -1" : "1", // THE FIX: Fills width on mobile safely
+          gridColumn: isMobile ? "1 / -1" : "1", 
           gridRow: isMobile ? "4" : "2", 
           width: "100%", 
           borderRight: isMobile ? "none" : `1px solid ${C.rule}`,
@@ -662,13 +662,13 @@ export default function VitalRoute() {
 
         {/* ══ CENTER — RADAR + DETAIL STRIP ════════════════════════════════════ */}
         <div style={{
-          gridColumn: isMobile ? "1 / -1" : "2", // THE FIX: Forces column 1 on mobile
+          gridColumn: isMobile ? "1 / -1" : "2", 
           gridRow: "2", // Ensures it stays right beneath Top bar
           display: "flex", flexDirection: "column",
           alignItems: "center", position: "relative",
           overflow: "hidden",
           minHeight: 0, 
-          height: isMobile ? "50vh" : "100%", // THE FIX: Strict mobile boundary
+          height: isMobile ? "50vh" : "100%", 
           animation: "vr-in 0.5s ease 0.15s both",
         }}>
 
@@ -829,13 +829,13 @@ export default function VitalRoute() {
 
         {/* ══ RIGHT SIDEBAR — LIVE FEED ════════════════════════════════════════ */}
         <div style={{
-          gridColumn: isMobile ? "1 / -1" : "3", // THE FIX: Fills width on mobile safely
-          gridRow: isMobile ? "3" : "2", // Right below Center Panel on mobile
+          gridColumn: isMobile ? "1 / -1" : "3", 
+          gridRow: isMobile ? "3" : "2", 
           background: C.panel,
           borderLeft: isMobile ? "none" : `1px solid ${C.ruleHard}`,
           borderTop: isMobile ? `1px solid ${C.ruleHard}` : "none",
           display: "flex", flexDirection: "column",
-          height: isMobile ? "65vh" : "100%", // THE FIX: Bounded height fixes the flex-overflow bug!
+          height: isMobile ? "65vh" : "100%", 
           minHeight: 0, 
           overflow: "hidden" 
         }}>
