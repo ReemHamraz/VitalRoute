@@ -105,7 +105,7 @@ If Gemini experiences a global outage, the backend's `catch` block intercepts th
 | Layer | Technology |
 |---|---|
 | **Frontend** | React.js (Vite), CSS, @react-google-maps/api |
-| **Backend** | Node.js, |
+| **Backend** | Node.js, Express.js |
 | **Database** | Firebase Admin SDK (Firestore) |
 | **AI** | Gemini 2.5 Flash API |
 | **Mapping** | Google Maps Distance Matrix API, Directions API |
