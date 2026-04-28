@@ -65,7 +65,7 @@ A dispatcher speaks the emergency. VitalRoute handles everything else:
               └── Supplier status: "active" → "dispatched"
     │
     ▼
-[React UI — Live Route Drawn on Map]
+[React UI — Live Route Drawn on Map using Directions API]
 ```
 
 ---
@@ -104,8 +104,8 @@ If Gemini experiences a global outage, the backend's `catch` block intercepts th
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | React.js (Vite), Tailwind CSS, @react-google-maps/api |
-| **Backend** | Node.js, Express.js |
+| **Frontend** | React.js (Vite), CSS, @react-google-maps/api |
+| **Backend** | Node.js, |
 | **Database** | Firebase Admin SDK (Firestore) |
 | **AI** | Gemini 2.5 Flash API |
 | **Mapping** | Google Maps Distance Matrix API, Directions API |
@@ -234,15 +234,6 @@ Deploying Vite to Vercel and Express to Cloud Run caused CORS to block all reque
 
 **4. Atomic Double-Booking**
 Multiple hospitals requesting the same supplier simultaneously caused race conditions. Solved with Firestore Transactions that execute a read-modify-write in a single indivisible operation.
-
----
-
-##  Future Roadmap
-
-- **Drone Delivery Integration** — Same AI/Geo architecture extended to route automated medical drones
-- **FEMA / Disaster Relief API** — Plug into national emergency management feeds
-- **Organ Transplant Networks** — Ultra-strict cold-chain and time-window enforcement for organ logistics
-- **Predictive Stockpiling** — ML model to forecast supply shortages before crises occur
 
 ---
 
